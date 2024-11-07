@@ -6,6 +6,252 @@
 namespace matrix {
 
 template <typename T>
+class Row
+{
+public:
+    Row() = default;
+    Row(std::nullptr_t) {};
+    
+    ~Row()
+    {
+        if (release_)
+            delete[] data_;
+    }
+
+    Row(size_t size, T *data) : size_(size), data_(data), release_(false) {}
+    Row(size_t size) : size_(size), data_(new T [size] {}) {}
+    
+    template <typename InputIterator>
+    Row(size_t size, InputIterator begin, InputIterator end) : size_(size), data_(new T [size] {})
+    {
+        size_t i = 0;
+        for (auto it = begin; it != end; ++it, ++i)
+        {
+            assert(i <= size_);
+            data_[i] = *it;
+        }
+
+        assert(i == size_);
+    }
+
+    Row(const Row<T> &other) : size_(other.size_), data_(new T [other.size_] {})
+    {
+        for (size_t i = 0; i != size_; ++i)
+            data_[i] = other.data_[i];
+    }
+
+    Row &operator=(const Row<T> &other)
+    {
+        if (*this != other)
+        {
+            if (size_ != other.size_)
+            {
+                size_ = other.size_;
+                delete[] data_;
+                data_ = new T [size_];
+            }
+            
+            for (size_t i = 0; i != size_; ++i)
+                data_[i] = other.data_[i];
+        }
+        
+        return *this;
+    }
+
+    Row(Row<T> &&other)
+    {
+        std::swap(data_, other.data_);
+        size_ = other.size_;
+    }
+
+    Row &operator=(Row<T> &&other)
+    {
+        if (*this != other)
+        {
+            std::swap(data_, other.data_);
+            size_ = other.size_;
+        }
+
+        return *this;
+    }
+
+    bool operator==(const Row<T> &other)
+    {
+        return (data_ == other.data_) && (size_ == other.size_);
+    }
+
+    bool operator!=(const Row<T> &other)
+    {
+        return !(*this == other);
+    }
+
+    Row &operator+=(const Row<T> &other)
+    {
+        assert(size_ == other.size_);
+
+        for (size_t i = 0; i < size_; ++i)
+            data_[i] += other.data_[i];
+
+        return *this;
+    }
+    
+    Row &operator-=(const Row<T> &other)
+    {
+        assert(size_ == other.size_);
+
+        for (size_t i = 0; i < size_; ++i)
+            data_[i] -= other.data_[i];
+
+        return *this;
+    }
+
+    Row &operator+=(T rhs)
+    {
+        for (size_t i = 0; i < size_; ++i)
+            data_[i] += rhs;
+
+        return *this;
+    }
+
+    Row &operator-=(T rhs)
+    {
+        for (size_t i = 0; i < size_; ++i)
+            data_[i] -= rhs;
+
+        return *this;
+    }
+
+    Row &operator*=(const Row<T> &other)
+    {
+        assert(size_ == other.size_);
+
+        for (size_t i = 0; i < size_; ++i)
+            data_[i] *= other.data_[i];
+
+        return *this;
+    }
+
+    Row &operator*=(T rhs)
+    {
+        for (size_t i = 0; i < size_; ++i)
+            data_[i] *= rhs;
+
+        return *this;
+    }
+
+    size_t GetSize() const
+    {
+        return size_;
+    }
+
+    T GetSum()
+    {
+        T temp = 0;
+
+        for (size_t i = 0; i < size_; ++i)
+            temp += data_[i];
+
+        return temp;
+    }
+
+    template <typename InputIterator>
+    Row<T> &RewriteRow(InputIterator *begin)
+    {
+        size_t i = 0;
+        for (auto it = *begin; i < size_; ++i, ++it)
+        {
+            assert(it);
+            data_[i] = *it;
+        }
+
+        return *this;
+    }
+
+    T *GetData()
+    {
+        return data_;
+    }
+
+    void print()
+    {
+        std::cout << "Row:" << std::endl;
+        for (size_t i = 0; i < size_; ++i)
+            std::cout << data_[i] << " ";
+
+        std::cout << std::endl;
+    }
+
+private:
+    T *data_ = nullptr;
+    size_t size_ = 0;
+    bool release_ = true;
+}; // class Row
+
+template <typename T> 
+Row<T> operator+(Row<T> lhs, Row<T> rhs)
+{
+    Row<T> temp = lhs;
+    temp += rhs;
+    return temp;
+}
+
+template <typename T>
+Row<T> operator+(Row<T> lhs, T rhs)
+{
+    Row<T> temp = lhs;
+    temp += rhs;
+    return temp;
+}
+
+template <typename T>
+Row<T> operator+(T lhs, Row<T> rhs)
+{
+    Row<T> temp = rhs;
+    temp += lhs;
+    return temp;
+}
+
+template <typename T> 
+Row<T> operator-(Row<T> lhs, Row<T> rhs)
+{
+    Row<T> temp = lhs;
+    temp -= rhs;
+    return temp;
+}
+
+template <typename T>
+Row<T> operator-(Row<T> lhs, T rhs)
+{
+    Row<T> temp = lhs;
+    temp -= rhs;
+    return temp;
+}
+
+template <typename T> 
+Row<T> operator*(Row<T> lhs, Row<T> rhs)
+{
+    Row<T> temp = lhs;
+    temp *= rhs;
+    return temp;
+}
+
+template <typename T>
+Row<T> operator*(Row<T> lhs, T rhs)
+{
+    Row<T> temp = lhs;
+    temp *= rhs;
+    return temp;
+}
+
+template <typename T>
+Row<T> operator*(T lhs, Row<T> rhs)
+{
+    Row<T> temp = rhs;
+    temp *= lhs;
+    return temp;
+}
+
+template <typename T>
 class MatrixBuf
 {
 public:
@@ -26,7 +272,6 @@ public:
 
         assert(i == size_);
     }
-
 
     MatrixBuf(const MatrixBuf<T> &other) : size_(other.size_), data_(new T[other.size_] {})
     {
@@ -129,8 +374,6 @@ private:
     T *data_ = nullptr;
     size_t size_ = 0;
 }; // class MatrixBuf
-
-
 
 template <typename T>
 class Matrix
@@ -255,6 +498,75 @@ public:
         return *this;
     }
 
+    Matrix<T> Transpose() const
+    {
+        Matrix<T> transpose_matrix(column_count_, row_count_);
+
+        T *src_matrix = GetData();
+        T *dst_matrix = transpose_matrix.GetData();
+
+        for (size_t i = 0; i < row_count_; ++i)
+            for (size_t j = 0; j < column_count_; ++j)
+                dst_matrix[j * row_count_ + i] = src_matrix[i * column_count_ + j];
+
+        return transpose_matrix;
+    }
+
+    Matrix<T> &operator*=(const Matrix<T> &other)
+    {
+        assert(column_count_ == other.row_count_);
+
+        Matrix<T> tother = other.Transpose();
+        Matrix<T> result{row_count_, other.column_count_};
+
+        T *data = GetData();
+        T *rdata = result.GetData();
+        T *tdata = tother.GetData();
+
+        for (size_t i = 0; i < row_count_; i++)
+        {
+            Row<T> index_row_this(column_count_, data + i * column_count_);
+            Row<T> tmp1(index_row_this);
+
+            for (size_t j = 0; j < other.column_count_; j++)
+            {
+                Row<T> index_row_tother(tother.column_count_, tdata + j * tother.column_count_);
+                Row<T> tmp2(index_row_tother);
+             
+                tmp2 *= tmp1;
+                rdata[i * result.column_count_ + j] = tmp2.GetSum();
+            }
+        }
+
+        *this = result;
+        return *this;
+    }
+
+    Matrix<T> &operator*=(T rhs)
+    {
+        T *data = GetData();
+        size_t size = row_count_ * column_count_;
+        
+        for (size_t i = 0; i < size; ++i)
+            data[i] *= rhs;
+
+        return *this;
+    }
+
+    void print() const
+    {
+        T *data = GetData();
+        std::cout << "Matrix:" << std::endl;
+
+        for (size_t i = 0; i < row_count_; ++i)
+        {
+            for (size_t j = 0; j < column_count_; ++j)
+            {
+                std::cout << data[i * column_count_ + j] << " ";
+            }
+            std::cout << std::endl;
+        }
+    }
 
 private:
     MatrixBuf<T> buf_;
@@ -303,42 +615,28 @@ Matrix<T> operator-(Matrix<T> lhs, T rhs)
     return temp;
 }
 
+template <typename T> 
+Matrix<T> operator*(Matrix<T> lhs, Matrix<T> rhs)
+{
+    Matrix<T> temp = lhs;
+    temp *= rhs;
+    return temp;
+}
+
+template <typename T>
+Matrix<T> operator*(Matrix<T> lhs, T rhs)
+{
+    Matrix<T> temp = lhs;
+    temp *= rhs;
+    return temp;
+}
+
+template <typename T>
+Matrix<T> operator*(T lhs, Matrix<T> rhs)
+{
+    Matrix<T> temp = rhs;
+    temp *= lhs;
+    return temp;
+}
+
 } // namespace matrix
-
-
-
-
-
-
-
-
-
-
-    // GetDeterminant()
-    // {
-    //     assert(rows_ == columns_)
-        
-    //     int n = rows_;
-    //     long double det = 1.0;
-
-    //     for (int i = 0; i < n; i++) {
-    //         long double pivot = static_cast<long double>(matrix[i * rows_ + i]);
-    //         if (std::fabs(pivot) < 1e-10) {
-    //             return 0;
-    //         }
-            
-    //         det *= pivot;
-            
-    //         for (int j = i + 1; j < n; j++) 
-    //         {
-    //             long double factor = static_cast<long double>(matrix[j * rows_ + i]) / pivot;
-
-    //             for (int k = i; k < n; k++)
-    //             {
-    //                 matrix[j * rows_ + k] -= factor * static_cast<long double>(matrix[i * rows_ + k]);
-    //             }
-    //         }
-    //     }
-
-    //     return det;
-    // }
