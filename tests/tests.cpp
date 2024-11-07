@@ -94,7 +94,7 @@ TEST(MatrixTest, MatrixMoveSemantic)
         ASSERT_EQ(ptr3[i], i * 2);
 }
 
-TEST(MatrixTest, MatrixArithmeticSemantic)
+TEST(MatrixTest, MatrixSimpleArithmeticSemantic)
 {
     std::vector<int> vector1{};
     for (size_t i = 0; i < 9; i++)
@@ -132,4 +132,85 @@ TEST(MatrixTest, MatrixArithmeticSemantic)
         ASSERT_EQ(ptr4[i], i + 2);
         ASSERT_EQ(ptr5[i], i - 1);
     }
+}
+
+TEST(MatrixTest, MatrixTransposeSemantic)
+{
+    std::vector<int> vector1{};
+    for (size_t i = 0; i < 8; i++)
+        vector1.push_back(i);
+
+    std::vector<int> vector2 {0, 4, 1, 5, 2, 6, 3, 7};
+
+    matrix::Matrix<int> matrix1(2, 4, vector1.begin(), vector1.end());
+    
+    matrix::Matrix<int> matrix2 = matrix1.Transpose();
+    ASSERT_EQ(matrix2.GetRowCount(), matrix1.GetColumnCount());
+    ASSERT_EQ(matrix1.GetRowCount(), matrix2.GetColumnCount());
+
+    matrix::Matrix<int> matrix3 = matrix2.Transpose();
+    ASSERT_EQ(matrix1.GetRowCount(), matrix3.GetRowCount());
+    ASSERT_EQ(matrix1.GetColumnCount(), matrix3.GetColumnCount());
+
+    auto ptr1 = matrix2.GetData();
+    auto ptr2 = matrix3.GetData();
+    for (size_t i = 0; i < 8; i++)
+    {
+        ASSERT_EQ(ptr1[i], vector2[i]);
+        ASSERT_EQ(ptr2[i], i);
+    }
+}
+
+TEST(MatrixTest, MatrixComplexArithmeticSemantic1)
+{
+    std::vector<int> vector1{1, 1, 2, 1, 1, 0};
+    std::vector<int> vector2{0, 1, 0, 2, 0, 1};
+
+    matrix::Matrix<int> matrix1(3, 2, vector1.begin(), vector1.end());
+    matrix::Matrix<int> matrix2(2, 3, vector2.begin(), vector2.end());
+
+    matrix::Matrix<int> matrix3 = matrix1 * 2;
+    matrix::Matrix<int> matrix4 = matrix2 * 4;
+
+    auto ptr1 = matrix3.GetData();
+    auto ptr2 = matrix4.GetData();
+
+    for (size_t i = 0; i < 6; i++)
+        ASSERT_EQ(ptr1[i], vector1[i] * 2);
+
+    for (size_t i = 0; i < 6; i++)
+        ASSERT_EQ(ptr2[i], vector2[i] * 4);
+}
+
+TEST(MatrixTest, MatrixComplexArithmeticSemantic2)
+{
+    std::vector<int> vector1{1, 1, 2, 1, 1, 0};
+    std::vector<int> vector2{0, 1, 0, 2, 0, 1};
+
+    std::vector<int> vector3{2, 1, 1, 2, 2, 1, 0, 1, 0};
+    std::vector<int> vector4{2, 1, 3, 2};
+
+    matrix::Matrix<int> matrix1(3, 2, vector1.begin(), vector1.end());
+    matrix::Matrix<int> matrix2(2, 3, vector2.begin(), vector2.end());
+
+    std::cerr << "AAA" << std::endl;
+    matrix::Matrix<int> matrix3 = matrix1 * matrix2;
+    std::cerr << "BBB" << std::endl;
+    // matrix::Matrix<int> matrix4 = matrix2 * matrix1;
+    // std::cerr << "CCC" << std::endl;
+
+    ASSERT_EQ(matrix3.GetRowCount(), 3);
+    ASSERT_EQ(matrix3.GetColumnCount(), 3);
+    
+    // ASSERT_EQ(matrix4.GetRowCount(), 2);
+    // ASSERT_EQ(matrix4.GetColumnCount(), 2);
+    
+    auto ptr1 = matrix3.GetData();
+//    auto ptr2 = matrix4.GetData();
+
+    for (size_t i = 0; i < 9; i++)
+        ASSERT_EQ(ptr1[i], vector1[i]);
+
+    // for (size_t i = 0; i < 4; i++)
+    //     ASSERT_EQ(ptr2[i], vector2[i]);
 }
