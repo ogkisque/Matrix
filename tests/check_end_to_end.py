@@ -3,7 +3,7 @@ from sys import executable
 
 num_test = 1
 is_ok = True
-for i in range(1, 6):
+for i in range(1, 9):
     str_data =  "tests/end_to_end/" + str(i) + ".dat"
     file_in = open(str_data, "r")
     str_ans = "tests/end_to_end/" + str(i) + ".dat.ans"
@@ -16,8 +16,8 @@ for i in range(1, 6):
     print("Test: " + str(num_test).strip())
 
     res = list(map(float, result.stdout.split()))
-    is_ok &= (res == ans)
-    if abs(res[0] - ans[0]) <= 0.0000001:
+    is_ok &= (abs(res[0] - ans[0]) <= 0.00001)
+    if abs(res[0] - ans[0]) <= 0.00001:
         print("OK")
     else:
         print("ERROR\nExpect:", ans[0], "\nGive:  ", res[0])

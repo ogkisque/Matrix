@@ -3,6 +3,8 @@
 #include <iostream>
 #include <iterator>
 
+#include "real_nums.hpp"
+
 namespace matrix {
 
 template <typename T>
@@ -73,6 +75,16 @@ public:
         }
 
         return *this;
+    }
+
+    T& operator[](int num_elem)
+    {
+        return data_[num_elem];
+    }
+
+    const T& operator[](int num_elem) const
+    {
+        return data_[num_elem];
     }
 
     bool operator==(const Row<T> &other)
@@ -186,6 +198,21 @@ private:
     size_t size_ = 0;
     bool release_ = true;
 }; // class Row
+
+template <typename T>
+static int swap_rows(matrix::Row<T>** rows, size_t from, size_t to)
+{
+    int mult = 1;
+    for (size_t i = from + 1; i < to && real_nums::is_zero((*rows[from])[from]); i++)
+    {
+        mult *= -1;
+        std::swap(rows[from], rows[i]);
+    }
+
+    if (real_nums::is_zero((*rows[from])[from]))
+        return 0;
+    return mult;
+}
 
 template <typename T> 
 Row<T> operator+(Row<T> lhs, Row<T> rhs)
@@ -445,6 +472,11 @@ public:
 
     ~Matrix() {}
 
+    Row<T> operator[] (int num_row)
+    {
+        return Row<T>{column_count_, GetData() + num_row * column_count_};
+    }
+
     bool operator==(const Matrix<T> &other)
     {
         return (buf_ == other.buf_) &&
@@ -551,6 +583,53 @@ public:
             data[i] *= rhs;
 
         return *this;
+    }
+
+    long double GetDeterminant() const
+    {
+        assert(row_count_ == column_count_);
+
+        size_t n = row_count_;
+        long double det = 1;
+        Matrix<long double> *tmp_matrix = new Matrix<long double>{n};
+        T *data = GetData();
+        long double *tmp_data = tmp_matrix->GetData();
+
+        for (size_t i = 0; i < n * n; i++)
+        {
+            tmp_data[i] = static_cast<long double>(data[i]);
+        }
+
+        auto **rows = new Row<long double>*[n];
+        for (size_t i = 0; i < n; i++)
+        {
+            rows[i] = new Row<long double>{n, tmp_data + i * n};
+        }
+
+        for (size_t i = 0; i < n - 1; i++)
+        {
+            for (size_t j = i + 1; j < n; j++)
+            {
+                det *= swap_rows(rows, i, n);
+                if (det == 0)
+                    return 0;
+
+                *(rows[j]) -= (*(rows[i]) * ((*rows[j])[i] / (*rows[i])[i]));
+            }
+        }
+
+        for (size_t i = 0; i < n; i++)
+            det *= (*rows[i])[i];
+
+        for (size_t i = 0; i < n; i++)
+        {
+            delete rows[i];
+        }
+
+        delete[] rows;
+        delete tmp_matrix;
+        
+        return det;
     }
 
     void print() const

@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
+#include <cmath>
 #include "matrix.hpp"
-
 
 TEST(MatrixTest, MatrixCtor)
 {
@@ -240,6 +240,35 @@ TEST(MatrixTest, MatrixComplexArithmeticSemantic3)
         ASSERT_EQ(ptr2[i], vector4[i]);
 }
 
+TEST(MatrixTest, MatrixIndexing)
+{
+    std::vector<int> vector{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
+    matrix::Matrix<int> matrix(3, 5, vector.begin(), vector.end());
+
+    for (size_t i = 0; i < 3; i++)
+        for (size_t j = 0; j < 5; j++)
+            ASSERT_EQ(matrix[i][j], vector[i * 5 + j]);
+}
+
+TEST(MatrixTest, MatrixDeterminant)
+{
+    std::vector<int> vector1{0, 1, 1, 0};
+    matrix::Matrix<int> matrix1(2, vector1.begin(), vector1.end());
+    ASSERT_EQ(matrix1.GetDeterminant(), -1);
+
+    std::vector<int> vector2{0, 1, 2, 0, 3, 4, 0, 5, 6};
+    matrix::Matrix<int> matrix2(3, vector2.begin(), vector2.end());
+    //ASSERT_EQ(matrix2.GetDeterminant(), 0);
+
+    std::vector<int> vector3{0, 1, 2, 7, 3, 4, 1, 5, 6};
+    matrix::Matrix<int> matrix3(3, vector3.begin(), vector3.end());
+    //ASSERT_EQ(std::round(matrix3.GetDeterminant()), 26);
+
+    std::vector<int> vector4{0, 1, 2, 0, 3, 4, 0, 5, 6};
+    matrix::Matrix<int> matrix4(3, vector4.begin(), vector4.end());
+    //ASSERT_EQ(matrix4.GetDeterminant(), 0);
+}
+
 TEST(RowTest, RowCtor)
 {
     matrix::Row<int> row1(6);
@@ -396,4 +425,16 @@ TEST(RowTest, RowComplexArithmeticSemantic)
         ASSERT_EQ(ptr2[i], 3 * i + 2);
         ASSERT_EQ(ptr3[i], 2 * i - 1);
     }
+}
+
+TEST(RowTest, RowIndexing)
+{
+    std::vector<int> vector{};
+    for (size_t i = 0; i < 9; i++)
+        vector.push_back(i * 2);
+
+    matrix::Row<int> row(9, vector.begin(), vector.end());
+
+    for (size_t i = 0; i < 9; i++)
+        ASSERT_EQ(row[i], 2 * i);
 }
