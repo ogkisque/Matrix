@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <iterator>
+#include <algorithm>
 
 #include "real_nums.hpp"
 
@@ -63,7 +64,7 @@ public:
     Row(Row<T> &&other)
     {
         std::swap(data_, other.data_);
-        size_ = other.size_;
+        std::swap(size_, other.size_);
     }
 
     Row &operator=(Row<T> &&other)
@@ -71,7 +72,7 @@ public:
         if (*this != other)
         {
             std::swap(data_, other.data_);
-            size_ = other.size_;
+            std::swap(size_, other.size_);
         }
 
         return *this;
@@ -117,18 +118,18 @@ public:
         return *this;
     }
 
-    Row &operator+=(T rhs)
+    Row &operator+=(T val)
     {
         for (size_t i = 0; i < size_; ++i)
-            data_[i] += rhs;
+            data_[i] += val;
 
         return *this;
     }
 
-    Row &operator-=(T rhs)
+    Row &operator-=(T val)
     {
         for (size_t i = 0; i < size_; ++i)
-            data_[i] -= rhs;
+            data_[i] -= val;
 
         return *this;
     }
@@ -143,10 +144,10 @@ public:
         return *this;
     }
 
-    Row &operator*=(T rhs)
+    Row &operator*=(T val)
     {
         for (size_t i = 0; i < size_; ++i)
-            data_[i] *= rhs;
+            data_[i] *= val;
 
         return *this;
     }
@@ -215,7 +216,7 @@ static int swap_rows(matrix::Row<T>** rows, size_t from, size_t to)
 }
 
 template <typename T> 
-Row<T> operator+(Row<T> lhs, Row<T> rhs)
+Row<T> operator+(Row<T> &lhs, Row<T> &rhs)
 {
     Row<T> temp = lhs;
     temp += rhs;
@@ -223,7 +224,7 @@ Row<T> operator+(Row<T> lhs, Row<T> rhs)
 }
 
 template <typename T>
-Row<T> operator+(Row<T> lhs, T rhs)
+Row<T> operator+(Row<T> &lhs, T rhs)
 {
     Row<T> temp = lhs;
     temp += rhs;
@@ -231,7 +232,7 @@ Row<T> operator+(Row<T> lhs, T rhs)
 }
 
 template <typename T>
-Row<T> operator+(T lhs, Row<T> rhs)
+Row<T> operator+(T lhs, Row<T> &rhs)
 {
     Row<T> temp = rhs;
     temp += lhs;
@@ -239,7 +240,7 @@ Row<T> operator+(T lhs, Row<T> rhs)
 }
 
 template <typename T> 
-Row<T> operator-(Row<T> lhs, Row<T> rhs)
+Row<T> operator-(Row<T> &lhs, Row<T> &rhs)
 {
     Row<T> temp = lhs;
     temp -= rhs;
@@ -247,7 +248,7 @@ Row<T> operator-(Row<T> lhs, Row<T> rhs)
 }
 
 template <typename T>
-Row<T> operator-(Row<T> lhs, T rhs)
+Row<T> operator-(Row<T> &lhs, T rhs)
 {
     Row<T> temp = lhs;
     temp -= rhs;
@@ -255,7 +256,7 @@ Row<T> operator-(Row<T> lhs, T rhs)
 }
 
 template <typename T> 
-Row<T> operator*(Row<T> lhs, Row<T> rhs)
+Row<T> operator*(Row<T> &lhs, Row<T> &rhs)
 {
     Row<T> temp = lhs;
     temp *= rhs;
@@ -263,7 +264,7 @@ Row<T> operator*(Row<T> lhs, Row<T> rhs)
 }
 
 template <typename T>
-Row<T> operator*(Row<T> lhs, T rhs)
+Row<T> operator*(Row<T> &lhs, T rhs)
 {
     Row<T> temp = lhs;
     temp *= rhs;
@@ -271,7 +272,7 @@ Row<T> operator*(Row<T> lhs, T rhs)
 }
 
 template <typename T>
-Row<T> operator*(T lhs, Row<T> rhs)
+Row<T> operator*(T lhs, Row<T> &rhs)
 {
     Row<T> temp = rhs;
     temp *= lhs;
@@ -317,8 +318,7 @@ public:
                 size_ = other.size_;
             }
 
-            for (size_t i = 0; i < size_; ++i)
-                data_[i] = other.data_[i];
+            std::copy(other.data_, other.data_ + size_, data_);
         }
 
         return *this;
@@ -327,7 +327,7 @@ public:
     MatrixBuf(MatrixBuf<T> &&other)
     {
         std::swap(data_, other.data_);
-        size_ = other.size_;
+        std::swap(size_, other.size_);
     }
 
     MatrixBuf &operator=(MatrixBuf<T> &&other)
@@ -335,7 +335,7 @@ public:
         if (*this != other)
         {
             std::swap(data_, other.data_);
-            size_ = other.size_;
+            std::swap(size_, other.size_);
         }
 
         return *this;
@@ -381,18 +381,18 @@ public:
         return *this;
     }
 
-    MatrixBuf<T> &operator+=(T rhs)
+    MatrixBuf<T> &operator+=(T val)
     {
         for (size_t i = 0; i < size_; ++i)
-            data_[i] += rhs;
+            data_[i] += val;
 
         return *this;
     }
 
-    MatrixBuf<T> &operator-=(T rhs)
+    MatrixBuf<T> &operator-=(T val)
     {
         for (size_t i = 0; i < size_; ++i)
-            data_[i] -= rhs;
+            data_[i] -= val;
 
         return *this;
     }
@@ -462,8 +462,8 @@ public:
     {
         if (*this != other)
         {
-            row_count_ = other.row_count_; 
-            column_count_ = other.column_count_;
+            std::swap(row_count_, other.row_count_); 
+            std::swap(column_count_, other.column_count_);
             std::swap(buf_, other.buf_);
         }
 
@@ -574,13 +574,13 @@ public:
         return *this;
     }
 
-    Matrix<T> &operator*=(T rhs)
+    Matrix<T> &operator*=(T val)
     {
         T *data = GetData();
         size_t size = row_count_ * column_count_;
         
         for (size_t i = 0; i < size; ++i)
-            data[i] *= rhs;
+            data[i] *= val;
 
         return *this;
     }
