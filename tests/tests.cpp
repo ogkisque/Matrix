@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <cmath>
 #include "matrix.hpp"
 
 
@@ -262,7 +263,7 @@ TEST(MatrixTest, MatrixDeterminant)
 
     std::vector<int> vector3{0, 1, 2, 7, 3, 4, 1, 5, 6};
     matrix::Matrix<int> matrix3(3, vector3.begin(), vector3.end());
-    ASSERT_EQ(matrix3.GetDeterminant(), 26);
+    ASSERT_EQ(std::round(matrix3.GetDeterminant()), 26);
 
     std::vector<int> vector4{0, 1, 2, 0, 3, 4, 0, 5, 6};
     matrix::Matrix<int> matrix4(3, vector4.begin(), vector4.end());

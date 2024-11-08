@@ -3,6 +3,8 @@
 #include <iostream>
 #include <iterator>
 
+#include "real_nums.hpp"
+
 namespace matrix {
 
 template <typename T>
@@ -196,6 +198,21 @@ private:
     size_t size_ = 0;
     bool release_ = true;
 }; // class Row
+
+template <typename T>
+static int swap_rows(matrix::Row<T>** rows, size_t from, size_t to)
+{
+    int mult = 1;
+    for (size_t i = from + 1; i < to && real_nums::is_zero((*rows[from])[from]); i++)
+    {
+        mult *= -1;
+        std::swap(rows[from], rows[i]);
+    }
+
+    if (real_nums::is_zero((*rows[from])[from]))
+        return 0;
+    return mult;
+}
 
 template <typename T> 
 Row<T> operator+(Row<T> lhs, Row<T> rhs)
@@ -568,7 +585,7 @@ public:
         return *this;
     }
 
-    T GetDeterminant() const
+    long double GetDeterminant() const
     {
         assert(row_count_ == column_count_);
 
@@ -589,32 +606,22 @@ public:
             rows[i] = new Row<long double>{n, tmp_data + i * n};
         }
 
-        for (size_t i = 1; i < n && (*rows[0])[0] == 0; i++)
-        {
-            det *= -1;
-            std::swap(rows[0], rows[i]);
-        }
-
-        if ((*rows[0])[0] == 0)
-            return 0;
-
         for (size_t i = 0; i < n - 1; i++)
         {
             for (size_t j = i + 1; j < n; j++)
             {
+                det *= swap_rows(rows, i, n);
+                if (det == 0)
+                    return 0;
+
                 *(rows[j]) -= (*(rows[i]) * ((*rows[j])[i] / (*rows[i])[i]));
             }
         }
 
         for (size_t i = 0; i < n; i++)
             det *= (*rows[i])[i];
-
-        for (size_t i = 0; i < n; i++)
-            rows[i]->print();
-        printf("QWERTY %Lf %d, %d\n", det, static_cast<T>(det), (int)det);
-        std::cout << "HAHAHA " << static_cast<T>(det) << std::endl;
         
-        return static_cast<T>(det);
+        return det;
     }
 
     void print() const
