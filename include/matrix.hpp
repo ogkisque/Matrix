@@ -620,6 +620,14 @@ public:
 
         for (size_t i = 0; i < n; i++)
             det *= (*rows[i])[i];
+
+        for (size_t i = 0; i < n; i++)
+        {
+            delete rows[i];
+        }
+
+        delete[] rows;
+        delete tmp_matrix;
         
         return det;
     }
