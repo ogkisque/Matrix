@@ -75,6 +75,16 @@ public:
         return *this;
     }
 
+    T& operator[](int num_elem)
+    {
+        return data_[num_elem];
+    }
+
+    const T& operator[](int num_elem) const
+    {
+        return data_[num_elem];
+    }
+
     bool operator==(const Row<T> &other)
     {
         return (data_ == other.data_) && (size_ == other.size_);
@@ -445,6 +455,11 @@ public:
 
     ~Matrix() {}
 
+    Row<T> operator[] (int num_row)
+    {
+        return Row<T>{column_count_, GetData() + num_row * column_count_};
+    }
+
     bool operator==(const Matrix<T> &other)
     {
         return (buf_ == other.buf_) &&
@@ -551,6 +566,55 @@ public:
             data[i] *= rhs;
 
         return *this;
+    }
+
+    T GetDeterminant() const
+    {
+        assert(row_count_ == column_count_);
+
+        size_t n = row_count_;
+        long double det = 1;
+        Matrix<long double> *tmp_matrix = new Matrix<long double>{n};
+        T *data = GetData();
+        long double *tmp_data = tmp_matrix->GetData();
+
+        for (size_t i = 0; i < n * n; i++)
+        {
+            tmp_data[i] = static_cast<long double>(data[i]);
+        }
+
+        auto **rows = new Row<long double>*[n];
+        for (size_t i = 0; i < n; i++)
+        {
+            rows[i] = new Row<long double>{n, tmp_data + i * n};
+        }
+
+        for (size_t i = 1; i < n && (*rows[0])[0] == 0; i++)
+        {
+            det *= -1;
+            std::swap(rows[0], rows[i]);
+        }
+
+        if ((*rows[0])[0] == 0)
+            return 0;
+
+        for (size_t i = 0; i < n - 1; i++)
+        {
+            for (size_t j = i + 1; j < n; j++)
+            {
+                *(rows[j]) -= (*(rows[i]) * ((*rows[j])[i] / (*rows[i])[i]));
+            }
+        }
+
+        for (size_t i = 0; i < n; i++)
+            det *= (*rows[i])[i];
+
+        for (size_t i = 0; i < n; i++)
+            rows[i]->print();
+        printf("QWERTY %Lf %d, %d\n", det, static_cast<T>(det), (int)det);
+        std::cout << "HAHAHA " << static_cast<T>(det) << std::endl;
+        
+        return static_cast<T>(det);
     }
 
     void print() const
