@@ -9,98 +9,61 @@
 namespace matrix {
 
 template <typename T>
-class Row
+class MatrixBuf
 {
 public:
-    Row() = default;
-    Row(std::nullptr_t) {};
-    
-    ~Row()
-    {
-        if (release_)
-            delete[] data_;
-    }
+    MatrixBuf(size_t size) : size_(size), data_(new T[size] {}) {}
 
-    Row(size_t size, T *data) : size_(size), data_(data), release_(false) {}
-    Row(size_t size) : size_(size), data_(new T [size] {}) {}
-    
     template <typename InputIterator>
-    Row(size_t size, InputIterator begin, InputIterator end) : size_(size), data_(new T [size] {})
-    {
-        size_t i = 0;
-        for (auto it = begin; it != end; ++it, ++i)
-        {
-            assert(i <= size_);
-            data_[i] = *it;
-        }
+    MatrixBuf(size_t size, InputIterator begin, InputIterator end) : size_(size), data_(SafeCopy(size, begin, end)) {}
+    MatrixBuf(const MatrixBuf<T> &other) : size_(other.size_), data_(SafeCopy(other.size_, other.data_)) {}
 
-        assert(i == size_);
-    }
-
-    Row(const Row<T> &other) : size_(other.size_), data_(new T [other.size_] {})
+    MatrixBuf &operator=(const MatrixBuf<T> &other)
     {
-        for (size_t i = 0; i != size_; ++i)
-            data_[i] = other.data_[i];
-    }
+        if (this == &other)
+            return *this;
 
-    Row &operator=(const Row<T> &other)
-    {
-        if (*this != other)
-        {
-            if (size_ != other.size_)
-            {
-                size_ = other.size_;
-                delete[] data_;
-                data_ = new T [size_];
-            }
-            
-            for (size_t i = 0; i != size_; ++i)
-                data_[i] = other.data_[i];
-        }
-        
+        MatrixBuf<T> tmp(other);
+        Swap(tmp);
         return *this;
     }
 
-    Row(Row<T> &&other)
+    MatrixBuf(MatrixBuf<T> &&other) noexcept
     {
         std::swap(data_, other.data_);
         std::swap(size_, other.size_);
     }
 
-    Row &operator=(Row<T> &&other)
+    MatrixBuf &operator=(MatrixBuf<T> &&other) noexcept
     {
-        if (*this != other)
-        {
-            std::swap(data_, other.data_);
-            std::swap(size_, other.size_);
-        }
+        std::swap(data_, other.data_);
+        std::swap(size_, other.size_);
 
         return *this;
     }
 
-    T& operator[](int num_elem)
+    ~MatrixBuf()
     {
-        return data_[num_elem];
+        delete[] data_;
     }
 
-    const T& operator[](int num_elem) const
-    {
-        return data_[num_elem];
-    }
-
-    bool operator==(const Row<T> &other)
+    bool operator==(const MatrixBuf<T> &other) const
     {
         return (data_ == other.data_) && (size_ == other.size_);
     }
 
-    bool operator!=(const Row<T> &other)
+    bool operator!=(const MatrixBuf<T> &other) const
     {
         return !(*this == other);
     }
 
-    Row &operator+=(const Row<T> &other)
+    MatrixBuf<T> &operator+=(const MatrixBuf<T> &other)
     {
-        assert(size_ == other.size_);
+        if (size_ != other.size_)
+            throw std::logic_error("MatrixBufs sizes do not match");
+        
+        if (!std::is_fundamental<T>::value)
+            throw std::logic_error("Element type is not fundamental");
 
         for (size_t i = 0; i < size_; ++i)
             data_[i] += other.data_[i];
@@ -108,9 +71,13 @@ public:
         return *this;
     }
     
-    Row &operator-=(const Row<T> &other)
+    MatrixBuf<T> &operator-=(const MatrixBuf<T> &other)
     {
-        assert(size_ == other.size_);
+        if (size_ != other.size_)
+            throw std::logic_error("MatrixBufs sizes do not match");
+        
+        if (!std::is_fundamental<T>::value)
+            throw std::logic_error("Element type is not fundamental");
 
         for (size_t i = 0; i < size_; ++i)
             data_[i] -= other.data_[i];
@@ -118,25 +85,193 @@ public:
         return *this;
     }
 
-    Row &operator+=(T val)
+    MatrixBuf<T> &operator+=(T val)
     {
+        if (!std::is_fundamental<T>::value)
+            throw std::logic_error("Element type is not fundamental");
+
         for (size_t i = 0; i < size_; ++i)
             data_[i] += val;
 
         return *this;
     }
 
-    Row &operator-=(T val)
-    {
+    MatrixBuf<T> &operator-=(T val)
+    {   
+        if (!std::is_fundamental<T>::value)
+            throw std::logic_error("Element type is not fundamental");
+
         for (size_t i = 0; i < size_; ++i)
             data_[i] -= val;
 
         return *this;
     }
 
-    Row &operator*=(const Row<T> &other)
+    T *GetData() const
     {
-        assert(size_ == other.size_);
+        return data_;
+    }
+
+private:
+    void Swap(MatrixBuf<T> &other) noexcept
+    {
+        std::swap(data_, other.data_);
+        std::swap(size_, other.size_);
+    }
+
+    T *SafeCopy(size_t src_size, const T *src)
+    {
+        T *dst = new T[src_size];
+
+        try {
+            if (std::is_nothrow_move_assignable<T>::value) 
+            {
+                for (size_t i = 0; i < src_size; ++i)
+                    dst[i] = std::move(src[i]);
+            }
+            else
+            {
+                for (size_t i = 0; i < src_size; ++i)
+                    dst[i] = src[i];
+            }
+        }
+        catch (...) {
+            delete [] dst;
+            throw;
+        }
+
+        return dst;
+    }
+
+    template <typename InputIterator>
+    T *SafeCopy(size_t src_size, InputIterator begin, InputIterator end)
+    {
+        T *dst = new T [src_size];
+
+        try {
+            size_t i = 0;
+
+            if (std::is_nothrow_move_assignable<T>::value) 
+            {
+                for (auto it = begin; it != end; ++it, ++i)
+                {
+                    if (i >= src_size)
+                        throw std::range_error("MatrixBuf size and number of elements between iterators dont match");
+                    dst[i] = std::move(*it);
+                }
+            }
+            else
+            {
+                for (auto it = begin; it != end; ++it, ++i)
+                {
+                    if (i >= src_size)
+                        throw std::range_error("MatrixBuf size and number of elements between iterators dont match");
+                    dst[i] = *it;
+                }
+            }
+
+            if (i != src_size)
+                throw std::logic_error("Number of elements between iterators more than MatrixBuf size");
+        }
+        catch (...) {
+            delete [] dst;
+            throw;
+        }
+
+        return dst;
+    }
+
+    T *data_ = nullptr;
+    size_t size_ = 0;
+}; // class MatrixBuf
+
+template <typename T>
+class ProxyRow
+{
+public:
+    ProxyRow(size_t size, T *data) : size_(size), data_(new (data) T [size]) {}
+    
+    T &operator[](int num_elem)
+    {
+        return data_[num_elem];
+    }
+
+    const T &operator[](int num_elem) const
+    {
+        return data_[num_elem];
+    }
+
+    ProxyRow &operator=(const ProxyRow<T> &other)
+    {
+        if (this == &other)
+            return *this;
+        
+        if (size_ != other.size_)
+            throw std::logic_error("Rows sizes do not match");
+
+        for (size_t i = 0; i < size_; ++i)
+            data_[i] = other.data_[i];
+
+        return *this;
+    }
+
+    ProxyRow &operator+=(const ProxyRow<T> &other)
+    {
+        if (size_ != other.size_)
+            throw std::logic_error("Rows sizes do not match");
+        
+        if (!std::is_fundamental<T>::value)
+            throw std::logic_error("Element type is not fundamental");
+
+        for (size_t i = 0; i < size_; ++i)
+            data_[i] += other.data_[i];
+
+        return *this;
+    }
+    
+    ProxyRow &operator-=(const ProxyRow<T> &other)
+    {
+        if (size_ != other.size_)
+            throw std::logic_error("Rows sizes do not match");
+        
+        if (!std::is_fundamental<T>::value)
+            throw std::logic_error("Element type is not fundamental");
+
+        for (size_t i = 0; i < size_; ++i)
+            data_[i] -= other.data_[i];
+
+        return *this;
+    }
+
+    ProxyRow &operator+=(T val)
+    {
+        if (!std::is_fundamental<T>::value)
+            throw std::logic_error("Element type is not fundamental");
+
+        for (size_t i = 0; i < size_; ++i)
+            data_[i] += val;
+
+        return *this;
+    }
+
+    ProxyRow &operator-=(T val)
+    {
+        if (!std::is_fundamental<T>::value)
+            throw std::logic_error("Element type is not fundamental");
+
+        for (size_t i = 0; i < size_; ++i)
+            data_[i] -= val;
+
+        return *this;
+    }
+
+    ProxyRow &operator*=(const ProxyRow<T> &other)
+    {
+        if (size_ != other.size_)
+            throw std::logic_error("Rows sizes do not match");
+        
+        if (!std::is_fundamental<T>::value)
+            throw std::logic_error("Element type is not fundamental");
 
         for (size_t i = 0; i < size_; ++i)
             data_[i] *= other.data_[i];
@@ -144,8 +279,11 @@ public:
         return *this;
     }
 
-    Row &operator*=(T val)
+    ProxyRow &operator*=(T val)
     {
+        if (!std::is_fundamental<T>::value)
+            throw std::logic_error("Element type is not fundamental");
+    
         for (size_t i = 0; i < size_; ++i)
             data_[i] *= val;
 
@@ -157,8 +295,11 @@ public:
         return size_;
     }
 
-    T GetSum()
+    T GetSum() const
     {
+        if (!std::is_fundamental<T>::value)
+            throw std::logic_error("Element type is not fundamental");
+    
         T temp = 0;
 
         for (size_t i = 0; i < size_; ++i)
@@ -167,25 +308,7 @@ public:
         return temp;
     }
 
-    template <typename InputIterator>
-    Row<T> &RewriteRow(InputIterator *begin)
-    {
-        size_t i = 0;
-        for (auto it = *begin; i < size_; ++i, ++it)
-        {
-            assert(it);
-            data_[i] = *it;
-        }
-
-        return *this;
-    }
-
-    T *GetData()
-    {
-        return data_;
-    }
-
-    void print()
+    void print() const
     {
         std::cout << "Row:" << std::endl;
         for (size_t i = 0; i < size_; ++i)
@@ -197,218 +320,99 @@ public:
 private:
     T *data_ = nullptr;
     size_t size_ = 0;
-    bool release_ = true;
-}; // class Row
-
-template <typename T>
-static int swap_rows(matrix::Row<T>** rows, size_t from, size_t to)
-{
-    int mult = 1;
-    for (size_t i = from + 1; i < to && real_nums::is_zero((*rows[from])[from]); i++)
-    {
-        mult *= -1;
-        std::swap(rows[from], rows[i]);
-    }
-
-    if (real_nums::is_zero((*rows[from])[from]))
-        return 0;
-    return mult;
-}
+}; // class ProxyRow
 
 template <typename T> 
-Row<T> operator+(Row<T> &lhs, Row<T> &rhs)
+ProxyRow<T> operator+(ProxyRow<T> &lhs, ProxyRow<T> &rhs)
 {
-    Row<T> temp = lhs;
+    ProxyRow<T> temp = lhs;
     temp += rhs;
     return temp;
 }
 
 template <typename T>
-Row<T> operator+(Row<T> &lhs, T rhs)
+ProxyRow<T> operator+(ProxyRow<T> &lhs, T rhs)
 {
-    Row<T> temp = lhs;
+    ProxyRow<T> temp = lhs;
     temp += rhs;
     return temp;
 }
 
 template <typename T>
-Row<T> operator+(T lhs, Row<T> &rhs)
+ProxyRow<T> operator+(T lhs, ProxyRow<T> &rhs)
 {
-    Row<T> temp = rhs;
+    ProxyRow<T> temp = rhs;
     temp += lhs;
     return temp;
 }
 
 template <typename T> 
-Row<T> operator-(Row<T> &lhs, Row<T> &rhs)
+ProxyRow<T> operator-(ProxyRow<T> &lhs, ProxyRow<T> &rhs)
 {
-    Row<T> temp = lhs;
+    ProxyRow<T> temp = lhs;
     temp -= rhs;
     return temp;
 }
 
 template <typename T>
-Row<T> operator-(Row<T> &lhs, T rhs)
+ProxyRow<T> operator-(ProxyRow<T> &lhs, T rhs)
 {
-    Row<T> temp = lhs;
+    ProxyRow<T> temp = lhs;
     temp -= rhs;
     return temp;
 }
 
 template <typename T> 
-Row<T> operator*(Row<T> &lhs, Row<T> &rhs)
+ProxyRow<T> operator*(ProxyRow<T> &lhs, ProxyRow<T> &rhs)
 {
-    Row<T> temp = lhs;
+    ProxyRow<T> temp = lhs;
     temp *= rhs;
     return temp;
 }
 
 template <typename T>
-Row<T> operator*(Row<T> &lhs, T rhs)
+ProxyRow<T> operator*(ProxyRow<T> &lhs, T rhs)
 {
-    Row<T> temp = lhs;
+    ProxyRow<T> temp = lhs;
     temp *= rhs;
     return temp;
 }
 
 template <typename T>
-Row<T> operator*(T lhs, Row<T> &rhs)
+ProxyRow<T> operator*(T lhs, ProxyRow<T> &rhs)
 {
-    Row<T> temp = rhs;
+    ProxyRow<T> temp = rhs;
     temp *= lhs;
     return temp;
 }
 
 template <typename T>
-class MatrixBuf
+class Matrix;
+
+template <typename T>
+static int SwapRows(Matrix<T> &matrix, size_t column_count, size_t from, size_t to)
 {
-public:
-    MatrixBuf() = default;
-    MatrixBuf(std::nullptr_t) {};
+    Matrix<T> tmp_matrix{1, column_count};
+    ProxyRow<T> tmp_row = tmp_matrix[0]; 
 
-    MatrixBuf(size_t size) : size_(size), data_(new T[size] {}) {}
-
-    template <typename InputIterator>
-    MatrixBuf(size_t size, InputIterator begin, InputIterator end) : size_(size), data_(new T[size] {})
+    int mult = 1;
+    for (size_t i = from + 1; i < to && real_nums::is_zero(matrix[from][from]); ++i, mult *= -1)
     {
-        size_t i = 0;
-        for (auto it = begin; it != end; ++it, ++i)
-        {
-            assert(i <= size_);
-            data_[i] = *it;
-        }
-
-        assert(i == size_);
+        tmp_row = matrix[from];
+        matrix[from] = matrix[i];
+        matrix[i] = tmp_row;
     }
 
-    MatrixBuf(const MatrixBuf<T> &other) : size_(other.size_), data_(new T[other.size_] {})
-    {
-        for (size_t i = 0; i < size_; ++i)
-            data_[i] = other.data_[i];
-    }
+    if (real_nums::is_zero(matrix[from][from]))
+        return 0;
 
-    MatrixBuf &operator=(const MatrixBuf<T> &other)
-    {
-        if (*this != other)
-        {
-            if (size_ != other.size_)
-            {
-                delete[] data_;
-                data_ = new T[other.size_] {};
-                size_ = other.size_;
-            }
-
-            std::copy(other.data_, other.data_ + size_, data_);
-        }
-
-        return *this;
-    }
-
-    MatrixBuf(MatrixBuf<T> &&other)
-    {
-        std::swap(data_, other.data_);
-        std::swap(size_, other.size_);
-    }
-
-    MatrixBuf &operator=(MatrixBuf<T> &&other)
-    {
-        if (*this != other)
-        {
-            std::swap(data_, other.data_);
-            std::swap(size_, other.size_);
-        }
-
-        return *this;
-    }
-
-    ~MatrixBuf()
-    {
-        delete[] data_;
-    }
-
-    bool operator==(const MatrixBuf<T> &other)
-    {
-        return (data_ == other.data_) && (size_ == other.size_);
-    }
-
-    bool operator!=(const MatrixBuf<T> &other)
-    {
-        return !(*this == other);
-    }
-
-    T *GetData() const
-    {
-        return data_;
-    }
-
-    MatrixBuf<T> &operator+=(const MatrixBuf<T> &other)
-    {
-        assert(size_ == other.size_);
-
-        for (size_t i = 0; i < size_; ++i)
-            data_[i] += other.data_[i];
-
-        return *this;
-    }
-    
-    MatrixBuf<T> &operator-=(const MatrixBuf<T> &other)
-    {
-        assert(size_ == other.size_);
-
-        for (size_t i = 0; i < size_; ++i)
-            data_[i] -= other.data_[i];
-
-        return *this;
-    }
-
-    MatrixBuf<T> &operator+=(T val)
-    {
-        for (size_t i = 0; i < size_; ++i)
-            data_[i] += val;
-
-        return *this;
-    }
-
-    MatrixBuf<T> &operator-=(T val)
-    {
-        for (size_t i = 0; i < size_; ++i)
-            data_[i] -= val;
-
-        return *this;
-    }
-
-private:
-    T *data_ = nullptr;
-    size_t size_ = 0;
-}; // class MatrixBuf
+    return mult;
+}
 
 template <typename T>
 class Matrix
 {
 public:
-    Matrix() = default;
-    Matrix(std::nullptr_t) : buf_(nullptr) {}
-
     Matrix(size_t size) : 
            row_count_(size),
            column_count_(size),
@@ -436,62 +440,24 @@ public:
            column_count_(column_count), 
            buf_(row_count * column_count, begin, end) {}
 
-    Matrix(const Matrix<T> &other) : 
-           row_count_(other.row_count_),
-           column_count_(other.column_count_),
-           buf_(other.buf_) {}
-
-    Matrix &operator=(const Matrix<T> &other)
+    ProxyRow<T> operator[](int num_row) const
     {
-        if (*this != other)
-        {
-            row_count_ = other.row_count_; 
-            column_count_ = other.column_count_;
-            buf_ = other.buf_;
-        }
+        if (num_row >= row_count_)
+            throw std::range_error("Row index is more count of exist rows");
 
-        return *this;
+        return ProxyRow(column_count_, buf_.GetData() + num_row * column_count_);
     }
 
-    Matrix(Matrix<T> &&other) : row_count_(other.row_count_), column_count_(other.column_count_)
-    {
-        std::swap(buf_, other.buf_);
-    }
-
-    Matrix &operator=(Matrix<T> &&other)
-    {
-        if (*this != other)
-        {
-            std::swap(row_count_, other.row_count_); 
-            std::swap(column_count_, other.column_count_);
-            std::swap(buf_, other.buf_);
-        }
-
-        return *this;
-    }
-
-    ~Matrix() {}
-
-    Row<T> operator[] (int num_row)
-    {
-        return Row<T>{column_count_, GetData() + num_row * column_count_};
-    }
-
-    bool operator==(const Matrix<T> &other)
+    bool operator==(const Matrix<T> &other) const
     {
         return (buf_ == other.buf_) &&
                (row_count_ == other.row_count_) &&
                (column_count_ == other.column_count_);
     }
 
-    bool operator!=(const Matrix<T> &other)
+    bool operator!=(const Matrix<T> &other) const
     {
         return !(*this == other);
-    }
-
-    T *GetData() const
-    {
-        return buf_.GetData();
     }
 
     size_t GetRowCount()
@@ -504,69 +470,67 @@ public:
         return column_count_; 
     }
 
+    Matrix<T> Transpose() const
+    {
+        Matrix<T> transpose(column_count_, row_count_);
+
+        for (size_t i = 0; i < row_count_; ++i)
+            for (size_t j = 0; j < column_count_; ++j)
+                transpose[j][i] = (*this)[i][j];
+
+        return transpose;
+    }
+
     Matrix<T> &operator+=(const Matrix<T> &other)
     {
-        assert(row_count_ == other.row_count_ && column_count_ == other.column_count_);
+        if (row_count_ != other.row_count_ || column_count_ != other.column_count_)
+            throw std::logic_error("Matrixs sizes do not match");
+
         buf_ += other.buf_;
         return *this;
     }
     
     Matrix<T> &operator-=(const Matrix<T> &other)
     {
-        assert(row_count_ == other.row_count_ && column_count_ == other.column_count_);
+        if (row_count_ != other.row_count_ || column_count_ != other.column_count_)
+            throw std::logic_error("Matrixs sizes do not match");
+        
         buf_ -= other.buf_;
         return *this;
     }
 
-    Matrix<T> &operator+=(T rhs)
+    Matrix<T> &operator*=(T val)
     {
-        buf_ += rhs;
-        return *this;
-    }
-
-    Matrix<T> &operator-=(T rhs)
-    {
-        buf_ -= rhs;
-        return *this;
-    }
-
-    Matrix<T> Transpose() const
-    {
-        Matrix<T> transpose_matrix(column_count_, row_count_);
-
-        T *src_matrix = GetData();
-        T *dst_matrix = transpose_matrix.GetData();
-
+        size_t size = row_count_ * column_count_;
+        
         for (size_t i = 0; i < row_count_; ++i)
             for (size_t j = 0; j < column_count_; ++j)
-                dst_matrix[j * row_count_ + i] = src_matrix[i * column_count_ + j];
+                (*this)[i][j] *= val;
 
-        return transpose_matrix;
+        return *this;
     }
 
     Matrix<T> &operator*=(const Matrix<T> &other)
     {
-        assert(column_count_ == other.row_count_);
+        if (column_count_ != other.row_count_)
+            throw std::logic_error("Matrixes sizes do not valid for multiply");
 
-        Matrix<T> tother = other.Transpose();
+        Matrix<T> transpose = other.Transpose();
         Matrix<T> result{row_count_, other.column_count_};
-
-        T *data = GetData();
-        T *rdata = result.GetData();
-        T *tdata = tother.GetData();
-
-        for (size_t i = 0; i < row_count_; i++)
+    
+        Matrix<T> tmp_matrix{1, column_count_};
+        ProxyRow<T> tmp_row = tmp_matrix[0];
+        
+        for (size_t i = 0; i < result.row_count_; ++i)
         {
-            Row<T> index_row_this(column_count_, data + i * column_count_);
-            Row<T> tmp1(index_row_this);
-
-            for (size_t j = 0; j < other.column_count_; j++)
+            ProxyRow<T> tmp1((*this)[i]);
+            
+            for (size_t j = 0; j < result.column_count_; ++j)
             {
-                Row<T> index_row_tother(tother.column_count_, tdata + j * tother.column_count_);
-                Row<T> tmp2(index_row_tother);
-             
-                tmp2 *= tmp1;
-                rdata[i * result.column_count_ + j] = tmp2.GetSum();
+                ProxyRow<T> tmp2(transpose[j]);
+                tmp_row = tmp2;
+                tmp_row *= tmp1;
+                result[i][j] = tmp_row.GetSum();   
             }
         }
 
@@ -574,85 +538,63 @@ public:
         return *this;
     }
 
-    Matrix<T> &operator*=(T val)
-    {
-        T *data = GetData();
-        size_t size = row_count_ * column_count_;
-        
-        for (size_t i = 0; i < size; ++i)
-            data[i] *= val;
-
-        return *this;
-    }
-
     long double GetDeterminant() const
     {
-        assert(row_count_ == column_count_);
+        if (row_count_ != column_count_)
+            throw std::logic_error("Matrix rows and columns counts do not match");
 
-        size_t n = row_count_;
         long double det = 1;
-        Matrix<long double> *tmp_matrix = new Matrix<long double>{n};
-        T *data = GetData();
-        long double *tmp_data = tmp_matrix->GetData();
+        Matrix<long double> matrix{row_count_};
 
-        for (size_t i = 0; i < n * n; i++)
-        {
-            tmp_data[i] = static_cast<long double>(data[i]);
-        }
+        for (size_t i = 0; i < row_count_; ++i)
+            for (size_t j = 0; j < row_count_; ++j)
+                matrix[i][j] = (*this)[i][j];
 
-        auto **rows = new Row<long double>*[n];
-        for (size_t i = 0; i < n; i++)
-        {
-            rows[i] = new Row<long double>{n, tmp_data + i * n};
-        }
+        Matrix<long double> tmp_matrix{1, row_count_};
+        ProxyRow<long double> tmp_row = tmp_matrix[0];
 
-        for (size_t i = 0; i < n - 1; i++)
+        for (size_t i = 0; i < row_count_ - 1; ++i)
         {
-            for (size_t j = i + 1; j < n; j++)
+            for (size_t j = i + 1; j < column_count_; ++j)
             {
-                det *= swap_rows(rows, i, n);
+                det *= SwapRows(matrix, column_count_, i, row_count_);
                 if (det == 0)
                     return 0;
 
-                *(rows[j]) -= (*(rows[i]) * ((*rows[j])[i] / (*rows[i])[i]));
+                tmp_row = matrix[i];
+                tmp_row *= matrix[j][i] / matrix[i][i];
+                
+                matrix[j] -= tmp_row;
             }
         }
 
-        for (size_t i = 0; i < n; i++)
-            det *= (*rows[i])[i];
-
-        for (size_t i = 0; i < n; i++)
-        {
-            delete rows[i];
-        }
-
-        delete[] rows;
-        delete tmp_matrix;
+        for (size_t i = 0; i < row_count_; ++i)
+            det *= matrix[i][i];
         
         return det;
     }
 
     void print() const
     {
-        T *data = GetData();
         std::cout << "Matrix:" << std::endl;
 
         for (size_t i = 0; i < row_count_; ++i)
         {
             for (size_t j = 0; j < column_count_; ++j)
-            {
-                std::cout << data[i * column_count_ + j] << " ";
-            }
+                std::cout << (*this)[i][j] << " ";
+
             std::cout << std::endl;
         }
     }
 
 private:
+
     MatrixBuf<T> buf_;
     size_t row_count_ = 0;
     size_t column_count_ = 0;
 
 }; // class Matrix
+
 
 template <typename T> 
 Matrix<T> operator+(Matrix<T> lhs, Matrix<T> rhs)
@@ -662,32 +604,8 @@ Matrix<T> operator+(Matrix<T> lhs, Matrix<T> rhs)
     return temp;
 }
 
-template <typename T>
-Matrix<T> operator+(Matrix<T> lhs, T rhs)
-{
-    Matrix<T> temp = lhs;
-    temp += rhs;
-    return temp;
-}
-
-template <typename T>
-Matrix<T> operator+(T lhs, Matrix<T> rhs)
-{
-    Matrix<T> temp = rhs;
-    temp += lhs;
-    return temp;
-}
-
 template <typename T> 
 Matrix<T> operator-(Matrix<T> lhs, Matrix<T> rhs)
-{
-    Matrix<T> temp = lhs;
-    temp -= rhs;
-    return temp;
-}
-
-template <typename T>
-Matrix<T> operator-(Matrix<T> lhs, T rhs)
 {
     Matrix<T> temp = lhs;
     temp -= rhs;
