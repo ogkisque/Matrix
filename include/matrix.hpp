@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <iostream>
 #include <iterator>
+#include <cassert>
 
 #include "real_nums.hpp"
 
