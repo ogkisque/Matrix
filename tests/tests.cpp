@@ -206,7 +206,7 @@ TEST(MatrixTest, MatrixComplexArithmeticSemantic3)
             ASSERT_EQ(matrix4[i][j], vector4[i * 5 + j]);
 }
 
-TEST(MatrixTest, MatrixDeterminant)
+TEST(MatrixTest, MatrixIntDeterminant)
 {
     std::vector<int> vector1{0, 1, 1, 0};
     matrix::Matrix<int> matrix1(2, vector1.begin(), vector1.end());
@@ -223,4 +223,25 @@ TEST(MatrixTest, MatrixDeterminant)
     std::vector<int> vector4{0, 1, 2, 0, 3, 4, 0, 5, 6};
     matrix::Matrix<int> matrix4(3, vector4.begin(), vector4.end());
     ASSERT_EQ(matrix4.GetDeterminant(), 0);
+
+    std::vector<int> vector5{3, 2, 3, 4, 0, 4, -3, -10, 0, 10, 9, 5, 0, 5, -3, -5};
+    matrix::Matrix<int> matrix5(4, vector5.begin(), vector5.end());
+    ASSERT_EQ(matrix5.GetDeterminant(), 1215);
+}
+
+TEST(MatrixTest, MatrixFloatDeterminant)
+{
+    std::vector<float> vector1{0.02, 0.01, 0,   0,
+                               1,    2,    1,   0,
+                               0,    1,    2,   1,
+                               0,    0,    100, 200};
+    matrix::Matrix<float> matrix1(4, vector1.begin(), vector1.end());
+    ASSERT_TRUE(real_nums::equal(matrix1.GetDeterminant(), 5.0f));
+
+    std::vector<float> vector2{0.02, 0.01, 0,   5,
+                               2,    1,    0,   500,
+                               0,    1,    2,   1,
+                               0,    0,    100, 200};
+    matrix::Matrix<float> matrix2(4, vector2.begin(), vector2.end());
+    ASSERT_TRUE(real_nums::equal(matrix2.GetDeterminant(), 0.0f));
 }
