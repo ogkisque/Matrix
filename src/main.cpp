@@ -43,9 +43,26 @@ int main()
     if (!GetInput(size, nums))
         return 1;
 
-    matrix::Matrix<double> matrix{size, nums.begin(), nums.end()};
-
-    std::cout << std::setprecision(std::numeric_limits<double>::max_digits10) << matrix.GetDeterminant() << std::endl;
+    try {
+        matrix::Matrix<double> matrix{size, nums.begin(), nums.end()};
+        std::cout << std::setprecision(std::numeric_limits<double>::max_digits10) << matrix.GetDeterminant() << std::endl;
+    }
+    catch (std::logic_error &logic_ex) {
+        std::cout << "Logic error: " << std::endl << logic_ex.what() << std::endl;
+    }
+    catch (std::range_error &range_ex) {
+        std::cout << "Range error: " << std::endl << range_ex.what() << std::endl;
+    }
+    catch (std::runtime_error &rt_ex) {
+        std::cout << "Runtime error: " << std::endl << rt_ex.what() << std::endl;
+    }
+    catch (std::bad_alloc &bad_alloc_ex) {
+        std::cout << "Bad alloc error: " << std::endl << bad_alloc_ex.what() << std::endl;
+    }
+    catch (std::exception &ex)
+    {
+        std::cout << "Exception: " << std::endl << ex.what() << std::endl;
+    }
 
     return 0;
 }
