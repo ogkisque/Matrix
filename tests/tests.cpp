@@ -4,15 +4,13 @@
 
 TEST(MatrixTest, MatrixCtor)
 {
-    matrix::Matrix<int> matrix1;
-    
-    matrix::Matrix<int> matrix2(2, 3);
-    ASSERT_EQ(matrix2.GetRowCount(), 2);
-    ASSERT_EQ(matrix2.GetColumnCount(), 3);
+    matrix::Matrix<int> matrix1(2, 3);
+    ASSERT_EQ(matrix1.GetRowCount(), 2);
+    ASSERT_EQ(matrix1.GetColumnCount(), 3);
 
     for (size_t i = 0; i < 2; i++)
         for (size_t j = 0; j < 3; j++)
-            ASSERT_EQ(matrix2[i][j], 0);
+            ASSERT_EQ(matrix1[i][j], 0);
 }
 
 TEST(MatrixTest, MatrixCtorOnIter)
