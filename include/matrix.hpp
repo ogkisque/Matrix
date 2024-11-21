@@ -308,31 +308,6 @@ protected:
     size_t used_ = 0;
 }; // class MatrixBuf
 
-
-template <typename T>
-class Matrix;
-
-template <typename T>
-static int SwapRows(Matrix<T> &matrix, size_t column_count, size_t from, size_t to)
-{
-    Matrix<T> tmp_matrix{1, column_count};
-    ProxyRow<T> tmp_row = tmp_matrix[0]; 
-
-    int mult = 1;
-    for (size_t i = from + 1; i < to && real_nums::is_zero(matrix[from][from]); ++i, mult *= -1)
-    {
-        tmp_row = matrix[from];
-        matrix[from] = matrix[i];
-        matrix[i] = tmp_row;
-    }
-
-    if (real_nums::is_zero(matrix[from][from]))
-        return 0;
-
-    return mult;
-}
-
-
 template <typename T>
 class Matrix : private MatrixBuf<T>
 {
@@ -482,29 +457,33 @@ public:
         return *this;
     }
 
-    long double GetDeterminant() const
+    T GetDeterminant() const
     {
         if (row_count_ != column_count_)
-            throw std::logic_error("Matrix rows and columns counts do not match");
+            throw std::logic_error("Matrix rows and columns counts is not equal");
 
-        long double det = 1;
-        Matrix<long double> matrix{row_count_};
+        if (row_count_ == 0)
+            throw std::logic_error("Matrix is empty");
 
-        for (size_t i = 0; i < row_count_; ++i)
-            for (size_t j = 0; j < row_count_; ++j)
-                matrix[i][j] = (*this)[i][j];
+        if constexpr (!std::is_floating_point_v<T>)
+        {
+            return GetIntDeterminant();
+        }
 
-        Matrix<long double> tmp_matrix{1, row_count_};
-        ProxyRow<long double> tmp_row = tmp_matrix[0];
+        T det = 1.0;
+        Matrix<T> matrix{*this};
+
+        Matrix<T> tmp_matrix{1, row_count_};
+        ProxyRow<T> tmp_row = tmp_matrix[0];
 
         for (size_t i = 0; i < row_count_ - 1; ++i)
         {
+            det *= matrix.SwapRows(column_count_, i, row_count_);
+            if (det == 0)
+                return 0;
+
             for (size_t j = i + 1; j < column_count_; ++j)
             {
-                det *= SwapRows(matrix, column_count_, i, row_count_);
-                if (det == 0)
-                    return 0;
-
                 tmp_row = matrix[i];
                 tmp_row *= matrix[j][i] / matrix[i][i];
                 
@@ -547,6 +526,87 @@ private:
 
         if (i != size_)
             throw std::logic_error("Number of elements between iterators more than MatrixBuf size");
+    }
+
+    int SwapRows(size_t column_count, size_t from, size_t to)
+    {
+        assert(std::is_floating_point_v<T>);
+
+        T max_elem = (*this)[from][from];
+        size_t num_row = from;
+        for (size_t i = from + 1; i < to; ++i)
+        {
+            if (real_nums::is_more_zero(fabs((*this)[i][from]) - fabs(max_elem)))
+            {
+                max_elem = (*this)[i][from];
+                num_row = i;
+            }
+        }
+
+        if (real_nums::is_zero((max_elem)))
+            return 0;
+
+        if (num_row == from)
+            return 1;
+
+        Matrix<T> tmp_matrix {1, column_count};
+        tmp_matrix[0] = (*this)[from];
+        (*this)[from] = (*this)[num_row];
+        (*this)[num_row] = tmp_matrix[0];
+        
+        return -1;
+    }
+
+    int SwapIntRows(size_t column_count, size_t from, size_t to)
+    {
+        if ((*this)[from][from] != 0)
+            return 1;
+        
+        for (size_t i = from + 1; i < to; ++i)
+        {
+            if ((*this)[i][from] != 0)
+            {
+                Matrix<T> tmp_matrix {1, column_count};
+                tmp_matrix[0] = (*this)[from];
+                (*this)[from] = (*this)[i];
+                (*this)[i] = tmp_matrix[0];
+                return -1;
+            }
+        }
+
+        return 0;
+    }
+
+    T GetIntDeterminant() const
+    {
+        T mult = 1.0;
+        T coef = 1;
+        Matrix<T> matrix{*this};
+
+        Matrix<T> tmp_matrix{1, row_count_};
+        ProxyRow<T> tmp_row = tmp_matrix[0];
+
+        for (size_t i = 0; i < row_count_ - 1; ++i)
+        {
+            mult *= matrix.SwapIntRows(column_count_, i, row_count_);
+            if (mult == 0)
+                return 0;
+
+            T val1 = matrix[i][i];
+
+            for (size_t j = i + 1; j < column_count_; ++j)
+            {
+                T val2 = matrix[j][i];
+                matrix[j][i] = 0;
+
+                for (size_t k = i + 1; k < column_count_; ++k)
+                    matrix[j][k] = (matrix[j][k] * val1 - matrix[i][k] * val2) / coef;
+            }
+
+            coef = val1;
+        }
+        
+        return mult * matrix[row_count_ - 1][column_count_ - 1];
     }
 
     size_t row_count_ = 0;

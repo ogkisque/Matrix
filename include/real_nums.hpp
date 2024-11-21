@@ -1,72 +1,82 @@
-#include <limits>
-#include <cmath>
 #include <algorithm>
+#include <cmath>
+#include <limits>
 
 #pragma once
 
-namespace real_nums
-{
+namespace real_nums {
 
-    const double EPS = 1e-13; //std::numeric_limits<double>::epsilon();
-    const double MAX = std::numeric_limits<double>::max();
+    template <typename T = double> class my_epsilon {
+    public:
+        static T epsilon();
+    };
 
-    inline bool is_zero(const double x)
-    {
-        return std::fabs(x) < EPS;
+    template <> class my_epsilon<long double> {
+    public:
+        static long double epsilon() { return 1e-13; };
+    };
+
+    template <> class my_epsilon<double> {
+    public:
+        static double epsilon() { return 1e-10; };
+    };
+
+    template <> class my_epsilon<float> {
+    public:
+        static float epsilon() { return 1e-5; };
+    };
+
+    template <typename T = double> inline bool is_zero(T x) {
+        T epsilon = my_epsilon<T>::epsilon();
+        return std::fabs(x) < epsilon;
     }
 
-    inline bool equald(const double x, const double y)
-    {
-        return std::fabs(x - y) < EPS;
+    template <typename T = double> inline bool equal(T x, T y) {
+        T epsilon = my_epsilon<T>::epsilon();
+        return std::fabs(x - y) < epsilon;
     }
 
-    inline bool is_more_zero(const double x)
-    {
-        return x > EPS;
+    template <typename T = double> inline bool is_more_zero(T x) {
+        T epsilon = my_epsilon<T>::epsilon();
+        return x > epsilon;
     }
 
-    inline bool is_less_zero(const double x)
-    {
-        return x < -EPS;
+    template <typename T = double> inline bool is_less_zero(T x) {
+        T epsilon = my_epsilon<T>::epsilon();
+        return x < -epsilon;
     }
 
-    inline bool is_more_or_equal_zero(const double x)
-    {
-        return is_more_zero(x) || is_zero(x);
+    template <typename T = double> inline bool is_more_or_equal_zero(T x) {
+        return is_more_zero<T>(x) || is_zero<T>(x);
     }
 
-    inline bool is_less_or_equal_zero(const double x)
-    {
-        return is_less_zero(x) || is_zero(x);
+    template <typename T = double> inline bool is_less_or_equal_zero(T x) {
+        return is_less_zero<T>(x) || is_zero<T>(x);
     }
 
-    inline double max2(double x, double y)
-    {
+    template <typename T = double> inline T max2(T x, T y) {
         return std::fmax(x, y);
     }
 
-    inline double min2(double x, double y)
-    {
+    template <typename T = double> inline T min2(T x, T y) {
         return std::fmin(x, y);
     }
-    
-    inline double max3(double x, double y, double z)
-    {
+
+    template <typename T = double> inline T max3(T x, T y, T z) {
         return std::fmax(std::fmax(x, y), z);
     }
 
-    inline double min3(double x, double y, double z)
-    {
+    template <typename T = double> inline T min3(T x, T y, T z) {
         return std::fmin(std::fmin(x, y), z);
     }
 
-    inline double max6(double x1, double y1, double z1, double x2, double y2, double z2)
-    {
+    template <typename T = double>
+    inline double max6(T x1, T y1, T z1, T x2, T y2, T z2) {
         return max2(max3(x1, y1, z1), max3(x2, y2, z2));
     }
 
-    inline double max9(double x1, double y1, double z1, double x2, double y2, double z2, double x3, double y3, double z3)
-    {
+    template <typename T = double>
+    inline double max9(T x1, T y1, T z1, T x2, T y2, T z2, T x3, T y3, T z3) {
         return max3(max3(x1, y1, z1), max3(x2, y2, z2), max3(x3, y3, z3));
     }
 
