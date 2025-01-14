@@ -230,3 +230,26 @@ TEST(MatrixTest, MatrixFloatDeterminant) {
     matrix::Matrix<float> matrix2(4, vector2.begin(), vector2.end());
     ASSERT_TRUE(real_nums::equal(matrix2.GetDeterminant(), 0.0f));
 }
+
+TEST(MatrixTest, TemplateTest1) {
+    std::vector<int> vector1{0, 2, 2, 2, 1, 1, 0, 2, 1};
+    std::vector<int> vector2{0, 1, 2, 0, 3, 2, 0, 2, 0};
+    
+    matrix::Matrix<int> matrix1(3, vector1.begin(), vector1.end());
+    matrix::Matrix<int> matrix2(3, vector2.begin(), vector2.end());
+
+    std::vector<matrix::Matrix<int>> vector3{matrix1, matrix2};
+    std::vector<matrix::Matrix<int>> vector4{matrix2, matrix1};
+
+    matrix::Matrix<matrix::Matrix<int>> matrix3(1, 2, vector3.begin(), vector3.end());
+    ASSERT_EQ(matrix3[0][0], matrix1);
+    ASSERT_EQ(matrix3[0][1], matrix2);
+    matrix::Matrix<matrix::Matrix<int>> matrix4(1, 2, vector4.begin(), vector4.end());
+    ASSERT_EQ(matrix4[0][0], matrix2);
+    ASSERT_EQ(matrix4[0][1], matrix1);
+    
+    matrix::Matrix<matrix::Matrix<int>> matrix5 = matrix3 + matrix4;
+    
+    for (size_t j = 0; j < 2; j++)
+        ASSERT_EQ(matrix5[0][j], matrix1 + matrix2);
+}
