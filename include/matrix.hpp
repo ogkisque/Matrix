@@ -8,256 +8,183 @@
 #include "real_nums.hpp"
 
 namespace matrix {
+namespace details {
+    template <typename T> class ProxyRow {
+    public:
+        ProxyRow(size_t size, T *data) : size_(size), data_(data) {}
 
-template <typename T> class ProxyRow {
-public:
-    ProxyRow(size_t size, T *data) : size_(size), data_(new(data) T[size]) {}
+        ProxyRow(const ProxyRow<T> &other) : size_(other.size), data_(other.data) {}
+        
+        ProxyRow &operator=(const ProxyRow<T> &other) {
+            if (this == &other)
+                return *this;
 
-    T &operator[](int num_elem) { return data_[num_elem]; }
+            if (size_ != other.size_)
+                throw std::logic_error("Rows sizes do not match");
 
-    const T &operator[](int num_elem) const { return data_[num_elem]; }
+            for (size_t i = 0; i < size_; ++i)
+                data_[i] = other.data_[i];
 
-    ProxyRow &operator=(const ProxyRow<T> &other) {
-        if (this == &other)
             return *this;
+        }
 
-        if (size_ != other.size_)
-            throw std::logic_error("Rows sizes do not match");
+        T &operator[](int num_elem) { return data_[num_elem]; }
+        const T &operator[](int num_elem) const { return data_[num_elem]; }
 
-        for (size_t i = 0; i < size_; ++i)
-            data_[i] = other.data_[i];
+        ProxyRow &operator+=(const ProxyRow<T> &other) {
+            static_assert(std::is_nothrow_move_constructible<T>::value, "Element type cannot be in arithmetic expressions");
 
-        return *this;
-    }
+            if (size_ != other.size_)
+                throw std::logic_error("Rows sizes do not match");
 
-    ProxyRow &operator+=(const ProxyRow<T> &other) {
-        if (size_ != other.size_)
-            throw std::logic_error("Rows sizes do not match");
+            for (size_t i = 0; i < size_; ++i)
+                data_[i] += other.data_[i];
 
-        if (!std::is_fundamental<T>::value)
-            throw std::logic_error("Element type is not fundamental");
+            return *this;
+        }
 
-        for (size_t i = 0; i < size_; ++i)
-            data_[i] += other.data_[i];
+        ProxyRow &operator-=(const ProxyRow<T> &other) {
+            static_assert(std::is_nothrow_move_constructible<T>::value, "Element type cannot be in arithmetic expressions");
 
-        return *this;
-    }
+            if (size_ != other.size_)
+                throw std::logic_error("Rows sizes do not match");
 
-    ProxyRow &operator-=(const ProxyRow<T> &other) {
-        if (size_ != other.size_)
-            throw std::logic_error("Rows sizes do not match");
+            for (size_t i = 0; i < size_; ++i)
+                data_[i] -= other.data_[i];
 
-        if (!std::is_fundamental<T>::value)
-            throw std::logic_error("Element type is not fundamental");
+            return *this;
+        }
 
-        for (size_t i = 0; i < size_; ++i)
-            data_[i] -= other.data_[i];
+        ProxyRow &operator*=(const ProxyRow<T> &other) {
+            static_assert(std::is_nothrow_move_constructible<T>::value, "Element type cannot be in arithmetic expressions");
 
-        return *this;
-    }
+            if (size_ != other.size_)
+                throw std::logic_error("Rows sizes do not match");
 
-    ProxyRow &operator+=(T val) {
-        if (!std::is_fundamental<T>::value)
-            throw std::logic_error("Element type is not fundamental");
+            for (size_t i = 0; i < size_; ++i)
+                data_[i] *= other.data_[i];
 
-        for (size_t i = 0; i < size_; ++i)
-            data_[i] += val;
+            return *this;
+        }
 
-        return *this;
-    }
+        ProxyRow &operator*=(T val) {
+            static_assert(std::is_nothrow_move_constructible<T>::value, "Element type cannot be in arithmetic expressions");
 
-    ProxyRow &operator-=(T val) {
-        if (!std::is_fundamental<T>::value)
-            throw std::logic_error("Element type is not fundamental");
+            for (size_t i = 0; i < size_; ++i)
+                data_[i] *= val;
 
-        for (size_t i = 0; i < size_; ++i)
-            data_[i] -= val;
+            return *this;
+        }
 
-        return *this;
-    }
+        friend ProxyRow<T> operator+(ProxyRow<T> &lhs, ProxyRow<T> &rhs) {
+            ProxyRow<T> temp = lhs;
+            temp += rhs;
+            return temp;
+        }
 
-    ProxyRow &operator*=(const ProxyRow<T> &other) {
-        if (size_ != other.size_)
-            throw std::logic_error("Rows sizes do not match");
+        friend ProxyRow<T> operator+(ProxyRow<T> &lhs, T rhs) {
+            ProxyRow<T> temp = lhs;
+            temp += rhs;
+            return temp;
+        }
 
-        if (!std::is_fundamental<T>::value)
-            throw std::logic_error("Element type is not fundamental");
+        friend ProxyRow<T> operator+(T lhs, ProxyRow<T> &rhs) {
+            ProxyRow<T> temp = rhs;
+            temp += lhs;
+            return temp;
+        }
 
-        for (size_t i = 0; i < size_; ++i)
-            data_[i] *= other.data_[i];
+        friend ProxyRow<T> operator-(ProxyRow<T> &lhs, ProxyRow<T> &rhs) {
+            ProxyRow<T> temp = lhs;
+            temp -= rhs;
+            return temp;
+        }
 
-        return *this;
-    }
+        friend ProxyRow<T> operator-(ProxyRow<T> &lhs, T rhs) {
+            ProxyRow<T> temp = lhs;
+            temp -= rhs;
+            return temp;
+        }
 
-    ProxyRow &operator*=(T val) {
-        if (!std::is_fundamental<T>::value)
-            throw std::logic_error("Element type is not fundamental");
+        friend ProxyRow<T> operator*(ProxyRow<T> &lhs, ProxyRow<T> &rhs) {
+            ProxyRow<T> temp = lhs;
+            temp *= rhs;
+            return temp;
+        }
 
-        for (size_t i = 0; i < size_; ++i)
-            data_[i] *= val;
+        friend ProxyRow<T> operator*(ProxyRow<T> &lhs, T rhs) {
+            ProxyRow<T> temp = lhs;
+            temp *= rhs;
+            return temp;
+        }
 
-        return *this;
-    }
+        friend ProxyRow<T> operator*(T lhs, ProxyRow<T> &rhs) {
+            ProxyRow<T> temp = rhs;
+            temp *= lhs;
+            return temp;
+        }
 
-    size_t GetSize() const { return size_; }
+        size_t GetSize() const { return size_; }
 
-    T GetSum() const {
-        if (!std::is_fundamental<T>::value)
-            throw std::logic_error("Element type is not fundamental");
+        T GetSum() const {
+            static_assert(std::is_nothrow_move_constructible<T>::value, "Element type cannot be in arithmetic expressions");
 
-        T temp = 0;
+            T temp = 0;
 
-        for (size_t i = 0; i < size_; ++i)
-            temp += data_[i];
+            for (size_t i = 0; i < size_; ++i)
+                temp += data_[i];
 
-        return temp;
-    }
+            return temp;
+        }
 
-    void print() const {
-        std::cout << "Row:" << std::endl;
-        for (size_t i = 0; i < size_; ++i)
-            std::cout << data_[i] << " ";
+        void print() const {
+            std::cout << "Row:" << std::endl;
+            for (size_t i = 0; i < size_; ++i)
+                std::cout << data_[i] << " ";
 
-        std::cout << std::endl;
-    }
+            std::cout << std::endl;
+        }
+    private:
+        T *data_ = nullptr;
+        size_t size_ = 0;
+    }; // class ProxyRow
+    
+    template <typename T> class MatrixBuf {
+    protected:
+        MatrixBuf(size_t size = 0)
+            : size_(size),
+            data_((size == 0)
+                        ? nullptr
+                        : static_cast<T *>(::operator new(size * sizeof(T)))) {}
 
-private:
-    T *data_ = nullptr;
-    size_t size_ = 0;
-}; // class ProxyRow
+        MatrixBuf(const MatrixBuf<T> &other) = delete;
+        MatrixBuf<T> &operator=(const MatrixBuf<T> &other) = delete;
 
-template <typename T>
-ProxyRow<T> operator+(ProxyRow<T> &lhs, ProxyRow<T> &rhs) {
-    ProxyRow<T> temp = lhs;
-    temp += rhs;
-    return temp;
-}
+        MatrixBuf(MatrixBuf<T> &&other) noexcept {
+            std::swap(data_, other.data_);
+            std::swap(size_, other.size_);
+            std::swap(used_, other.used_);
+        }
 
-template <typename T> ProxyRow<T> operator+(ProxyRow<T> &lhs, T rhs) {
-    ProxyRow<T> temp = lhs;
-    temp += rhs;
-    return temp;
-}
+        MatrixBuf<T> &operator=(MatrixBuf<T> &&other) noexcept {
+            std::swap(data_, other.data_);
+            std::swap(size_, other.size_);
+            std::swap(used_, other.used_);
+            return *this;
+        }
 
-template <typename T> ProxyRow<T> operator+(T lhs, ProxyRow<T> &rhs) {
-    ProxyRow<T> temp = rhs;
-    temp += lhs;
-    return temp;
-}
+        ~MatrixBuf() {
+            std::destroy(data_, data_ + used_);
+            ::operator delete(data_);
+        }
+    protected:
+        T *data_ = nullptr;
+        size_t size_ = 0;
+        size_t used_ = 0;
+    }; // class MatrixBuf
+}; // namespace details
 
-template <typename T>
-ProxyRow<T> operator-(ProxyRow<T> &lhs, ProxyRow<T> &rhs) {
-    ProxyRow<T> temp = lhs;
-    temp -= rhs;
-    return temp;
-}
-
-template <typename T> ProxyRow<T> operator-(ProxyRow<T> &lhs, T rhs) {
-    ProxyRow<T> temp = lhs;
-    temp -= rhs;
-    return temp;
-}
-
-template <typename T>
-ProxyRow<T> operator*(ProxyRow<T> &lhs, ProxyRow<T> &rhs) {
-    ProxyRow<T> temp = lhs;
-    temp *= rhs;
-    return temp;
-}
-
-template <typename T> ProxyRow<T> operator*(ProxyRow<T> &lhs, T rhs) {
-    ProxyRow<T> temp = lhs;
-    temp *= rhs;
-    return temp;
-}
-
-template <typename T> ProxyRow<T> operator*(T lhs, ProxyRow<T> &rhs) {
-    ProxyRow<T> temp = rhs;
-    temp *= lhs;
-    return temp;
-}
-
-template <typename T> void Construct(T *ptr, const T &other) {
-    new (ptr) T{other};
-}
-
-template <typename T> void Construct(T *ptr, T &&other) {
-    new (ptr) T{std::move(other)};
-}
-
-template <typename T> void Destroy(T *ptr) { ptr->~T(); }
-
-template <typename Iterator> void Destroy(Iterator begin, Iterator end) {
-    for (Iterator it = begin; it != end; ++it)
-        Destroy(it);
-}
-
-template <typename T> class MatrixBuf {
-protected:
-    MatrixBuf(size_t size = 0)
-        : size_(size),
-          data_((size == 0)
-                    ? nullptr
-                    : static_cast<T *>(::operator new(size * sizeof(T)))) {}
-
-    MatrixBuf(const MatrixBuf<T> &other) = delete;
-    MatrixBuf &operator=(const MatrixBuf<T> &other) = delete;
-
-    MatrixBuf(MatrixBuf<T> &&other) noexcept {
-        std::swap(data_, other.data_);
-        std::swap(size_, other.size_);
-    }
-
-    MatrixBuf &operator=(MatrixBuf<T> &&other) noexcept {
-        std::swap(data_, other.data_);
-        std::swap(size_, other.size_);
-        return *this;
-    }
-
-    ~MatrixBuf() {
-        Destroy(data_, data_ + used_);
-        ::operator delete(data_);
-    }
-
-    bool operator==(const MatrixBuf<T> &other) const {
-        return (data_ == other.data_) && (size_ == other.size_);
-    }
-
-    bool operator!=(const MatrixBuf<T> &other) const {
-        return !(*this == other);
-    }
-
-    MatrixBuf<T> &operator+=(const MatrixBuf<T> &other) {
-        if (size_ != other.size_)
-            throw std::logic_error("MatrixBufs sizes do not match");
-
-        if (!std::is_fundamental<T>::value)
-            throw std::logic_error("Element type is not fundamental");
-
-        for (size_t i = 0; i < size_; ++i)
-            data_[i] += other.data_[i];
-
-        return *this;
-    }
-
-    MatrixBuf<T> &operator-=(const MatrixBuf<T> &other) {
-        if (size_ != other.size_)
-            throw std::logic_error("MatrixBufs sizes do not match");
-
-        if (!std::is_fundamental<T>::value)
-            throw std::logic_error("Element type is not fundamental");
-
-        for (size_t i = 0; i < size_; ++i)
-            data_[i] -= other.data_[i];
-
-        return *this;
-    }
-
-protected:
-    T *data_ = nullptr;
-    size_t size_ = 0;
-    size_t used_ = 0;
-}; // class MatrixBuf
+using namespace details;
 
 template <typename T> class Matrix : private MatrixBuf<T> {
     using MatrixBuf<T>::used_;
@@ -298,8 +225,20 @@ public:
         return *this;
     }
 
-    Matrix(Matrix &&other) = default;
-    Matrix &operator=(Matrix &&other) = default;
+    Matrix(Matrix<T> &&other) noexcept : MatrixBuf<T>(std::move(other)) {
+        std::swap(row_count_, other.row_count_);
+        std::swap(column_count_, other.column_count_);
+    }
+
+    Matrix<T> &operator=(Matrix<T> &&other) noexcept {
+        if (this != &other) {
+            MatrixBuf<T>::operator=(std::move(other));
+            std::swap(row_count_, other.row_count_);
+            std::swap(column_count_, other.column_count_);
+        }
+
+        return *this;
+    }
 
     ProxyRow<T> operator[](int num_row) const {
         if (num_row >= row_count_)
@@ -309,8 +248,14 @@ public:
     }
 
     bool operator==(const Matrix<T> &other) const {
-        return (row_count_ == other.row_count_) &&
-               (column_count_ == other.column_count_);
+        if (row_count_ != other.row_count_ || column_count_ != other.column_count_)
+            return false;
+
+        for (size_t i = 0; i < size_; i++)
+            if (data_[i] != other.data_[i])
+                return false;
+
+        return true;
     }
 
     bool operator!=(const Matrix<T> &other) const { return !(*this == other); }
@@ -330,12 +275,11 @@ public:
     }
 
     Matrix<T> &operator+=(const Matrix<T> &other) {
+        static_assert(std::is_nothrow_move_constructible<T>::value, "Element type cannot be in arithmetic expressions");
+
         if (row_count_ != other.row_count_ ||
             column_count_ != other.column_count_)
             throw std::logic_error("Matrixs sizes do not match");
-
-        if (!std::is_fundamental<T>::value)
-            throw std::logic_error("Element type is not fundamental");
 
         for (size_t i = 0; i < size_; ++i)
             data_[i] += other.data_[i];
@@ -344,12 +288,11 @@ public:
     }
 
     Matrix<T> &operator-=(const Matrix<T> &other) {
+        static_assert(std::is_nothrow_move_constructible<T>::value, "Element type cannot be in arithmetic expressions");
+
         if (row_count_ != other.row_count_ ||
             column_count_ != other.column_count_)
             throw std::logic_error("Matrixs sizes do not match");
-
-        if (!std::is_fundamental<T>::value)
-            throw std::logic_error("Element type is not fundamental");
 
         for (size_t i = 0; i < size_; ++i)
             data_[i] -= other.data_[i];
@@ -358,8 +301,7 @@ public:
     }
 
     Matrix<T> &operator*=(T val) {
-        if (!std::is_fundamental<T>::value)
-            throw std::logic_error("Element type is not fundamental");
+        static_assert(std::is_nothrow_move_constructible<T>::value, "Element type cannot be in arithmetic expressions");
 
         for (size_t i = 0; i < size_; ++i)
             data_[i] *= val;
@@ -393,6 +335,8 @@ public:
     }
 
     T GetDeterminant() const {
+        static_assert(std::is_fundamental<T>::value, "Element type is not fundamental");
+
         if (row_count_ != column_count_)
             throw std::logic_error(
                 "Matrix rows and columns counts is not equal");
@@ -440,6 +384,35 @@ public:
         }
     }
 
+    friend Matrix<T> operator+(Matrix<T> lhs, Matrix<T> rhs) {
+        Matrix<T> temp = lhs;
+        temp += rhs;
+        return temp;
+    }
+
+    friend Matrix<T> operator-(Matrix<T> lhs, Matrix<T> rhs) {
+        Matrix<T> temp = lhs;
+        temp -= rhs;
+        return temp;
+    }
+
+    friend Matrix<T> operator*(Matrix<T> lhs, Matrix<T> rhs) {
+        Matrix<T> temp = lhs;
+        temp *= rhs;
+        return temp;
+    }
+
+    friend Matrix<T> operator*(Matrix<T> lhs, T rhs) {
+        Matrix<T> temp = lhs;
+        temp *= rhs;
+        return temp;
+    }
+
+    friend Matrix<T> operator*(T lhs, Matrix<T> rhs) {
+        Matrix<T> temp = rhs;
+        temp *= lhs;
+        return temp;
+    }
 private:
     template <typename InputIterator>
     void Construct(InputIterator begin, InputIterator end) {
@@ -448,8 +421,8 @@ private:
             if (i >= size_)
                 throw std::range_error("MatrixBuf size and number of elements "
                                        "between iterators dont match");
-
-            matrix::Construct(data_ + i, *it);
+            
+            std::construct_at(data_ + i, *it);
         }
 
         if (i != size_)
@@ -534,35 +507,4 @@ private:
     size_t row_count_ = 0;
     size_t column_count_ = 0;
 }; // class Matrix
-
-template <typename T> Matrix<T> operator+(Matrix<T> lhs, Matrix<T> rhs) {
-    Matrix<T> temp = lhs;
-    temp += rhs;
-    return temp;
-}
-
-template <typename T> Matrix<T> operator-(Matrix<T> lhs, Matrix<T> rhs) {
-    Matrix<T> temp = lhs;
-    temp -= rhs;
-    return temp;
-}
-
-template <typename T> Matrix<T> operator*(Matrix<T> lhs, Matrix<T> rhs) {
-    Matrix<T> temp = lhs;
-    temp *= rhs;
-    return temp;
-}
-
-template <typename T> Matrix<T> operator*(Matrix<T> lhs, T rhs) {
-    Matrix<T> temp = lhs;
-    temp *= rhs;
-    return temp;
-}
-
-template <typename T> Matrix<T> operator*(T lhs, Matrix<T> rhs) {
-    Matrix<T> temp = rhs;
-    temp *= lhs;
-    return temp;
-}
-
 } // namespace matrix
