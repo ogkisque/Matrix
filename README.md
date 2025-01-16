@@ -1,4 +1,4 @@
-# AVL tree
+# Matrix
 
 ## Introduction
 
@@ -8,7 +8,7 @@ This project is an implementation of the matrix with determinant counting, addit
 
 Cloning repository:
 ```
-git clone https://github.com/ask0later/AVL-tree
+git clone https://github.com/ogkisque/Matrix
 ```
 
 If you want to build the project, write this in the project directory:
@@ -38,7 +38,7 @@ cmake --build build --target tests
 
 After that, run:
 ```
-./build/tests/tests
+ctest —test-dir build
 ```
 
 ### End to end
