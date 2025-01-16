@@ -4,6 +4,7 @@
 #include <iostream>
 #include <iterator>
 #include <cassert>
+#include <new>
 
 #include "real_nums.hpp"
 
@@ -16,6 +17,7 @@ namespace details {
         ProxyRow(const ProxyRow<T> &other) : size_(other.size), data_(other.data) {}
         
         ProxyRow &operator=(const ProxyRow<T> &other) {
+            static_assert(std::is_nothrow_move_constructible<T>::value, "Element type cannot be in arithmetic expressions");
             if (this == &other)
                 return *this;
 
@@ -155,7 +157,7 @@ namespace details {
             : size_(size),
             data_((size == 0)
                         ? nullptr
-                        : static_cast<T *>(::operator new(size * sizeof(T)))) {}
+                        : static_cast<T *>(::operator new(size * sizeof(T), std::align_val_t(alignof(T))))) {}
 
         MatrixBuf(const MatrixBuf<T> &other) = delete;
         MatrixBuf<T> &operator=(const MatrixBuf<T> &other) = delete;
@@ -175,7 +177,7 @@ namespace details {
 
         ~MatrixBuf() {
             std::destroy(data_, data_ + used_);
-            ::operator delete(data_);
+            ::operator delete(data_, std::align_val_t(alignof(T)));
         }
     protected:
         T *data_ = nullptr;
@@ -268,8 +270,13 @@ public:
         Matrix<T> transpose(column_count_, row_count_);
 
         for (size_t i = 0; i < row_count_; ++i)
+        {
             for (size_t j = 0; j < column_count_; ++j)
+            {
                 transpose[j][i] = (*this)[i][j];
+                transpose.used_++;
+            }
+        }
 
         return transpose;
     }
@@ -431,8 +438,6 @@ private:
     }
 
     int SwapRows(size_t column_count, size_t from, size_t to) {
-        assert(std::is_floating_point_v<T>);
-
         T max_elem = (*this)[from][from];
         size_t num_row = from;
         for (size_t i = from + 1; i < to; ++i) {
