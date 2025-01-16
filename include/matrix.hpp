@@ -177,7 +177,7 @@ namespace details {
 
         ~MatrixBuf() {
             std::destroy(data_, data_ + used_);
-            ::operator delete(data_);
+            ::operator delete(data_, std::align_val_t(alignof(T)));
         }
     protected:
         T *data_ = nullptr;
