@@ -14,7 +14,7 @@ namespace details {
     public:
         ProxyRow(size_t size, T *data) : size_(size), data_(data) {}
 
-        ProxyRow(const ProxyRow<T> &other) : size_(other.size), data_(other.data) {}
+        ProxyRow(const ProxyRow<T> &other) : size_(other.size_), data_(other.data_) {}
         
         ProxyRow &operator=(const ProxyRow<T> &other) {
             static_assert(std::is_nothrow_move_constructible<T>::value, "Element type cannot be in arithmetic expressions");
@@ -270,13 +270,8 @@ public:
         Matrix<T> transpose(column_count_, row_count_);
 
         for (size_t i = 0; i < row_count_; ++i)
-        {
-            for (size_t j = 0; j < column_count_; ++j)
-            {
+            for (size_t j = 0; j < column_count_; ++j, ++(transpose.used_))
                 transpose[j][i] = (*this)[i][j];
-                transpose.used_++;
-            }
-        }
 
         return transpose;
     }
