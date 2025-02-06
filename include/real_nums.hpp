@@ -54,30 +54,24 @@ template <typename T = double> inline bool is_less_or_equal_zero(T x) {
     return is_less_zero<T>(x) || is_zero<T>(x);
 }
 
-template <typename T = double> inline T max2(T x, T y) {
-    return std::fmax(x, y);
-}
-
-template <typename T = double> inline T min2(T x, T y) {
-    return std::fmin(x, y);
-}
-
-template <typename T = double> inline T max3(T x, T y, T z) {
-    return std::fmax(std::fmax(x, y), z);
-}
-
-template <typename T = double> inline T min3(T x, T y, T z) {
-    return std::fmin(std::fmin(x, y), z);
+template <typename T = double, typename ... Args>
+inline T max(T first, Args ... others) {
+    return std::fmax(first, max(others ...));
 }
 
 template <typename T = double>
-inline double max6(T x1, T y1, T z1, T x2, T y2, T z2) {
-    return max2(max3(x1, y1, z1), max3(x2, y2, z2));
+inline T max(T first) {
+    return first;
+}
+
+template <typename T = double, typename ... Args>
+inline T min(T first, Args ... others) {
+    return std::fmin(first, max(others ...));
 }
 
 template <typename T = double>
-inline double max9(T x1, T y1, T z1, T x2, T y2, T z2, T x3, T y3, T z3) {
-    return max3(max3(x1, y1, z1), max3(x2, y2, z2), max3(x3, y3, z3));
+inline T min(T first) {
+    return first;
 }
 
 } // namespace real_nums
