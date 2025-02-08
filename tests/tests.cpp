@@ -269,3 +269,18 @@ TEST(MatrixTest, TemplateTest2) {
     ASSERT_EQ(matrix3[1][0], "cz");
     ASSERT_EQ(matrix3[1][1], "dw");
 }
+
+TEST(MatrixTest, TemplateTest3) {
+    std::vector<std::string> vector1{"a", "b", "c", "d"};
+    std::vector<std::string> vector2{"x", "y", "z", "w"};
+    
+    matrix::Matrix<std::string> matrix1(2, vector1.begin(), vector1.end());
+    matrix::Matrix<std::string> matrix2(2, vector2.begin(), vector2.end());
+    
+    auto matrix3 = matrix1 + matrix2;
+    
+    ASSERT_EQ(matrix3[0][0], "ax");
+    ASSERT_EQ(matrix3[0][1], "by");
+    ASSERT_EQ(matrix3[1][0], "cz");
+    ASSERT_EQ(matrix3[1][1], "dw");
+}
