@@ -6,6 +6,7 @@
 #include <cassert>
 #include <new>
 #include <numeric>
+#include <type_traits>
 
 #include "real_nums.hpp"
 
@@ -32,36 +33,6 @@ namespace details {
         T &operator[](int num_elem) { return data_[num_elem]; }
         const T &operator[](int num_elem) const { return data_[num_elem]; }
 
-        ProxyRow &operator+=(const ProxyRow<T> &other) {
-            if (size_ != other.size_)
-                throw std::logic_error("Rows sizes do not match");
-
-            for (size_t i = 0; i < size_; ++i)
-                data_[i] += other.data_[i];
-
-            return *this;
-        }
-
-        ProxyRow &operator-=(const ProxyRow<T> &other) {
-            if (size_ != other.size_)
-                throw std::logic_error("Rows sizes do not match");
-
-            for (size_t i = 0; i < size_; ++i)
-                data_[i] -= other.data_[i];
-
-            return *this;
-        }
-
-        ProxyRow &operator*=(const ProxyRow<T> &other) {
-            if (size_ != other.size_)
-                throw std::logic_error("Rows sizes do not match");
-
-            for (size_t i = 0; i < size_; ++i)
-                data_[i] *= other.data_[i];
-
-            return *this;
-        }
-
         ProxyRow &operator*=(const T &val) {
             for (size_t i = 0; i < size_; ++i)
                 data_[i] *= val;
@@ -69,58 +40,10 @@ namespace details {
             return *this;
         }
 
-        friend ProxyRow<T> operator+(const ProxyRow<T> &lhs, const ProxyRow<T> &rhs) {
-            ProxyRow<T> temp = lhs;
-            temp += rhs;
-            return temp;
-        }
-
-        friend ProxyRow<T> operator+(const ProxyRow<T> &lhs, const T &rhs) {
-            ProxyRow<T> temp = lhs;
-            temp += rhs;
-            return temp;
-        }
-
-        friend ProxyRow<T> operator+(const T &lhs, const ProxyRow<T> &rhs) {
-            ProxyRow<T> temp = rhs;
-            temp += lhs;
-            return temp;
-        }
-
-        friend ProxyRow<T> operator-(const ProxyRow<T> &lhs, const ProxyRow<T> &rhs) {
-            ProxyRow<T> temp = lhs;
-            temp -= rhs;
-            return temp;
-        }
-
-        friend ProxyRow<T> operator-(const ProxyRow<T> &lhs, const T &rhs) {
-            ProxyRow<T> temp = lhs;
-            temp -= rhs;
-            return temp;
-        }
-
-        friend ProxyRow<T> operator*(const ProxyRow<T> &lhs, const ProxyRow<T> &rhs) {
-            ProxyRow<T> temp = lhs;
-            temp *= rhs;
-            return temp;
-        }
-
-        friend ProxyRow<T> operator*(const ProxyRow<T> &lhs, const T &rhs) {
-            ProxyRow<T> temp = lhs;
-            temp *= rhs;
-            return temp;
-        }
-
-        friend ProxyRow<T> operator*(const T &lhs, const ProxyRow<T> &rhs) {
-            ProxyRow<T> temp = rhs;
-            temp *= lhs;
-            return temp;
-        }
-
         inline size_t GetSize() const { return size_; }
 
         inline T GetSum() const {
-            return std::accumulate(&data_[0], &data_[size_], 0);
+            return std::accumulate(data_, data_ + size_, 0);
         }
 
         void print() const {
@@ -212,7 +135,6 @@ public:
     }
 
     Matrix(Matrix<T> &&other) = default;
-
     Matrix<T> &operator=(Matrix<T> &&other) = default;
 
     ProxyRow<T> operator[](int num_row) const {
@@ -287,7 +209,11 @@ public:
             for (size_t j = 0; j < result.column_count_; ++j) {
                 ProxyRow<T> tmp2(transpose[j]);
                 tmp_row = tmp2;
-                tmp_row *= tmp1;
+
+                for (size_t k = 0; k < column_count_; ++k) {
+                    tmp_row[k] *= tmp1[k];
+                }
+
                 result[i][j] = tmp_row.GetSum();
             }
         }
@@ -325,7 +251,9 @@ public:
                 tmp_row = matrix[i];
                 tmp_row *= matrix[j][i] / matrix[i][i];
 
-                matrix[j] -= tmp_row;
+                for (size_t k = 0; k < column_count_; ++k) {
+                    matrix[j][k] -= tmp_row[k];
+                }
             }
         }
 
