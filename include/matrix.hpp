@@ -5,6 +5,8 @@
 #include <iterator>
 #include <cassert>
 #include <new>
+#include <numeric>
+#include <type_traits>
 
 #include "real_nums.hpp"
 
@@ -17,15 +19,13 @@ namespace details {
         ProxyRow(const ProxyRow<T> &other) : size_(other.size_), data_(other.data_) {}
         
         ProxyRow &operator=(const ProxyRow<T> &other) {
-            static_assert(std::is_nothrow_move_constructible<T>::value, "Element type cannot be in arithmetic expressions");
             if (this == &other)
                 return *this;
 
             if (size_ != other.size_)
                 throw std::logic_error("Rows sizes do not match");
 
-            for (size_t i = 0; i < size_; ++i)
-                data_[i] = other.data_[i];
+            std::copy(other.data_, other.data_ + size_, data_);
 
             return *this;
         }
@@ -33,110 +33,17 @@ namespace details {
         T &operator[](int num_elem) { return data_[num_elem]; }
         const T &operator[](int num_elem) const { return data_[num_elem]; }
 
-        ProxyRow &operator+=(const ProxyRow<T> &other) {
-            static_assert(std::is_nothrow_move_constructible<T>::value, "Element type cannot be in arithmetic expressions");
-
-            if (size_ != other.size_)
-                throw std::logic_error("Rows sizes do not match");
-
-            for (size_t i = 0; i < size_; ++i)
-                data_[i] += other.data_[i];
-
-            return *this;
-        }
-
-        ProxyRow &operator-=(const ProxyRow<T> &other) {
-            static_assert(std::is_nothrow_move_constructible<T>::value, "Element type cannot be in arithmetic expressions");
-
-            if (size_ != other.size_)
-                throw std::logic_error("Rows sizes do not match");
-
-            for (size_t i = 0; i < size_; ++i)
-                data_[i] -= other.data_[i];
-
-            return *this;
-        }
-
-        ProxyRow &operator*=(const ProxyRow<T> &other) {
-            static_assert(std::is_nothrow_move_constructible<T>::value, "Element type cannot be in arithmetic expressions");
-
-            if (size_ != other.size_)
-                throw std::logic_error("Rows sizes do not match");
-
-            for (size_t i = 0; i < size_; ++i)
-                data_[i] *= other.data_[i];
-
-            return *this;
-        }
-
-        ProxyRow &operator*=(T val) {
-            static_assert(std::is_nothrow_move_constructible<T>::value, "Element type cannot be in arithmetic expressions");
-
+        ProxyRow &operator*=(const T &val) {
             for (size_t i = 0; i < size_; ++i)
                 data_[i] *= val;
 
             return *this;
         }
 
-        friend ProxyRow<T> operator+(ProxyRow<T> &lhs, ProxyRow<T> &rhs) {
-            ProxyRow<T> temp = lhs;
-            temp += rhs;
-            return temp;
-        }
+        inline size_t GetSize() const { return size_; }
 
-        friend ProxyRow<T> operator+(ProxyRow<T> &lhs, T rhs) {
-            ProxyRow<T> temp = lhs;
-            temp += rhs;
-            return temp;
-        }
-
-        friend ProxyRow<T> operator+(T lhs, ProxyRow<T> &rhs) {
-            ProxyRow<T> temp = rhs;
-            temp += lhs;
-            return temp;
-        }
-
-        friend ProxyRow<T> operator-(ProxyRow<T> &lhs, ProxyRow<T> &rhs) {
-            ProxyRow<T> temp = lhs;
-            temp -= rhs;
-            return temp;
-        }
-
-        friend ProxyRow<T> operator-(ProxyRow<T> &lhs, T rhs) {
-            ProxyRow<T> temp = lhs;
-            temp -= rhs;
-            return temp;
-        }
-
-        friend ProxyRow<T> operator*(ProxyRow<T> &lhs, ProxyRow<T> &rhs) {
-            ProxyRow<T> temp = lhs;
-            temp *= rhs;
-            return temp;
-        }
-
-        friend ProxyRow<T> operator*(ProxyRow<T> &lhs, T rhs) {
-            ProxyRow<T> temp = lhs;
-            temp *= rhs;
-            return temp;
-        }
-
-        friend ProxyRow<T> operator*(T lhs, ProxyRow<T> &rhs) {
-            ProxyRow<T> temp = rhs;
-            temp *= lhs;
-            return temp;
-        }
-
-        size_t GetSize() const { return size_; }
-
-        T GetSum() const {
-            static_assert(std::is_nothrow_move_constructible<T>::value, "Element type cannot be in arithmetic expressions");
-
-            T temp = 0;
-
-            for (size_t i = 0; i < size_; ++i)
-                temp += data_[i];
-
-            return temp;
+        inline T GetSum() const {
+            return std::accumulate(data_, data_ + size_, 0);
         }
 
         void print() const {
@@ -227,20 +134,8 @@ public:
         return *this;
     }
 
-    Matrix(Matrix<T> &&other) noexcept : MatrixBuf<T>(std::move(other)) {
-        std::swap(row_count_, other.row_count_);
-        std::swap(column_count_, other.column_count_);
-    }
-
-    Matrix<T> &operator=(Matrix<T> &&other) noexcept {
-        if (this != &other) {
-            MatrixBuf<T>::operator=(std::move(other));
-            std::swap(row_count_, other.row_count_);
-            std::swap(column_count_, other.column_count_);
-        }
-
-        return *this;
-    }
+    Matrix(Matrix<T> &&other) = default;
+    Matrix<T> &operator=(Matrix<T> &&other) = default;
 
     ProxyRow<T> operator[](int num_row) const {
         if (num_row >= row_count_)
@@ -250,21 +145,14 @@ public:
     }
 
     bool operator==(const Matrix<T> &other) const {
-        if (row_count_ != other.row_count_ || column_count_ != other.column_count_)
-            return false;
-
-        for (size_t i = 0; i < size_; i++)
-            if (data_[i] != other.data_[i])
-                return false;
-
-        return true;
+        return std::equal(data_, data_ + size_ - 1, other.data_);
     }
 
     bool operator!=(const Matrix<T> &other) const { return !(*this == other); }
 
-    size_t GetRowCount() { return row_count_; }
+    size_t GetRowCount() const { return row_count_; }
 
-    size_t GetColumnCount() { return column_count_; }
+    size_t GetColumnCount() const { return column_count_; }
 
     Matrix<T> Transpose() const {
         Matrix<T> transpose(column_count_, row_count_);
@@ -277,8 +165,6 @@ public:
     }
 
     Matrix<T> &operator+=(const Matrix<T> &other) {
-        static_assert(std::is_nothrow_move_constructible<T>::value, "Element type cannot be in arithmetic expressions");
-
         if (row_count_ != other.row_count_ ||
             column_count_ != other.column_count_)
             throw std::logic_error("Matrixs sizes do not match");
@@ -290,8 +176,6 @@ public:
     }
 
     Matrix<T> &operator-=(const Matrix<T> &other) {
-        static_assert(std::is_nothrow_move_constructible<T>::value, "Element type cannot be in arithmetic expressions");
-
         if (row_count_ != other.row_count_ ||
             column_count_ != other.column_count_)
             throw std::logic_error("Matrixs sizes do not match");
@@ -302,9 +186,7 @@ public:
         return *this;
     }
 
-    Matrix<T> &operator*=(T val) {
-        static_assert(std::is_nothrow_move_constructible<T>::value, "Element type cannot be in arithmetic expressions");
-
+    Matrix<T> &operator*=(const T &val) {
         for (size_t i = 0; i < size_; ++i)
             data_[i] *= val;
 
@@ -327,7 +209,11 @@ public:
             for (size_t j = 0; j < result.column_count_; ++j) {
                 ProxyRow<T> tmp2(transpose[j]);
                 tmp_row = tmp2;
-                tmp_row *= tmp1;
+
+                for (size_t k = 0; k < column_count_; ++k) {
+                    tmp_row[k] *= tmp1[k];
+                }
+
                 result[i][j] = tmp_row.GetSum();
             }
         }
@@ -346,7 +232,7 @@ public:
         if (row_count_ == 0)
             throw std::logic_error("Matrix is empty");
 
-        if constexpr (!std::is_floating_point_v<T>) {
+        if (std::is_integral_v<T>) {
             return GetIntDeterminant();
         }
 
@@ -365,7 +251,9 @@ public:
                 tmp_row = matrix[i];
                 tmp_row *= matrix[j][i] / matrix[i][i];
 
-                matrix[j] -= tmp_row;
+                for (size_t k = 0; k < column_count_; ++k) {
+                    matrix[j][k] -= tmp_row[k];
+                }
             }
         }
 
@@ -386,31 +274,31 @@ public:
         }
     }
 
-    friend Matrix<T> operator+(Matrix<T> lhs, Matrix<T> rhs) {
+    friend Matrix<T> operator+(const Matrix<T> &lhs, const Matrix<T> &rhs) {
         Matrix<T> temp = lhs;
         temp += rhs;
         return temp;
     }
 
-    friend Matrix<T> operator-(Matrix<T> lhs, Matrix<T> rhs) {
+    friend Matrix<T> operator-(const Matrix<T> &lhs, const Matrix<T> &rhs) {
         Matrix<T> temp = lhs;
         temp -= rhs;
         return temp;
     }
 
-    friend Matrix<T> operator*(Matrix<T> lhs, Matrix<T> rhs) {
+    friend Matrix<T> operator*(const Matrix<T> &lhs, const Matrix<T> &rhs) {
         Matrix<T> temp = lhs;
         temp *= rhs;
         return temp;
     }
 
-    friend Matrix<T> operator*(Matrix<T> lhs, T rhs) {
+    friend Matrix<T> operator*(const Matrix<T> &lhs, const T &rhs) {
         Matrix<T> temp = lhs;
         temp *= rhs;
         return temp;
     }
 
-    friend Matrix<T> operator*(T lhs, Matrix<T> rhs) {
+    friend Matrix<T> operator*(const T &lhs, const Matrix<T> &rhs) {
         Matrix<T> temp = rhs;
         temp *= lhs;
         return temp;
@@ -457,23 +345,6 @@ private:
         return -1;
     }
 
-    int SwapIntRows(size_t column_count, size_t from, size_t to) {
-        if ((*this)[from][from] != 0)
-            return 1;
-
-        for (size_t i = from + 1; i < to; ++i) {
-            if ((*this)[i][from] != 0) {
-                Matrix<T> tmp_matrix{1, column_count};
-                tmp_matrix[0] = (*this)[from];
-                (*this)[from] = (*this)[i];
-                (*this)[i] = tmp_matrix[0];
-                return -1;
-            }
-        }
-
-        return 0;
-    }
-
     T GetIntDeterminant() const {
         T mult = 1.0;
         T coef = 1;
@@ -502,6 +373,23 @@ private:
         }
 
         return mult * matrix[row_count_ - 1][column_count_ - 1];
+    }
+
+    int SwapIntRows(size_t column_count, size_t from, size_t to) {
+        if ((*this)[from][from] != 0)
+            return 1;
+
+        for (size_t i = from + 1; i < to; ++i) {
+            if ((*this)[i][from] != 0) {
+                Matrix<T> tmp_matrix{1, column_count};
+                tmp_matrix[0] = (*this)[from];
+                (*this)[from] = (*this)[i];
+                (*this)[i] = tmp_matrix[0];
+                return -1;
+            }
+        }
+
+        return 0;
     }
 
     size_t row_count_ = 0;
