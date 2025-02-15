@@ -284,3 +284,16 @@ TEST(MatrixTest, TemplateTest3) {
     ASSERT_EQ(matrix3[1][0], "cz");
     ASSERT_EQ(matrix3[1][1], "dw");
 }
+
+TEST(MatrixTest, OperatorEqual) {
+    std::vector<int> vector1{0, 1, 2, 3, 4, 5};
+    
+    matrix::Matrix<int> matrix1(2, 3, vector1.begin(), vector1.end());
+    matrix::Matrix<int> matrix2(3, 2, vector1.begin(), vector1.end());
+    auto matrix3 = matrix1;
+    auto matrix4 = matrix2;
+
+    ASSERT_NE(matrix1, matrix2);
+    ASSERT_EQ(matrix3, matrix1);
+    ASSERT_EQ(matrix4, matrix2);
+}

@@ -145,7 +145,11 @@ public:
     }
 
     bool operator==(const Matrix<T> &other) const {
-        return std::equal(data_, data_ + size_ - 1, other.data_);
+        if (size_ != other.size_ || row_count_ != other.row_count_ || \
+            column_count_ != other.column_count_)
+            return false;
+
+        return std::equal(data_, data_ + size_, other.data_, other.data_ + other.size_); 
     }
 
     bool operator!=(const Matrix<T> &other) const { return !(*this == other); }
