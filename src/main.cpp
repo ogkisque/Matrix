@@ -3,7 +3,9 @@
 #include <iostream>
 #include <limits>
 #include <vector>
+#include <cmath>
 
+#include "real_nums.hpp"
 #include "matrix.hpp"
 
 namespace {
@@ -38,9 +40,13 @@ int main() {
 
     try {
         matrix::Matrix<double> matrix{size, nums.begin(), nums.end()};
-        std::cout << std::setprecision(
-                         std::numeric_limits<double>::max_digits10)
-                  << matrix.GetDeterminant() << std::endl;
+        double det = matrix.GetDeterminant();
+
+        if (std::fabs(std::round(det) - det) < 1e-5)
+            std::cout << static_cast<long>(std::round(det)) << std::endl;
+        else
+            std::cout << std::setprecision(std::numeric_limits<double>::max_digits10)
+                      << det << std::endl;
     } catch (std::logic_error &logic_ex) {
         std::cout << "Logic error: " << std::endl
                   << logic_ex.what() << std::endl;
