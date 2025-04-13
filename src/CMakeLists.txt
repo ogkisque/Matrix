@@ -1,4 +1,4 @@
-set(INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include)
+set(INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 
 add_library(matrix_lib INTERFACE)
 target_include_directories(matrix_lib INTERFACE ${INCLUDE_DIR})
